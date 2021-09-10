@@ -22,8 +22,10 @@ end
 
 % % Get index of the time points where aplitude is greater than theshold
 % % iteratively lower threshholds until at least 6 points are selected
+
 [amplitude,ridgeFreq] = max(I,[],1);
 %amplitude = smooth(amplitude,0.1,'rlowess')';
+
 iter = 1;
 greaterthannoise = false(1, size(I, 2));
 while sum(greaterthannoise)<5
