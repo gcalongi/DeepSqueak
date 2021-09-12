@@ -393,7 +393,7 @@ switch eventdata.Character
         slide_focus(+ handles.data.settings.focus_window_size, hObject, eventdata, handles)
     case 31 % char(31) is down arrow key
         slide_focus(- handles.data.settings.focus_window_size, hObject, eventdata, handles)
-    case 'space'
+    case 32 % 'space'
         forwardButton_Callback(hObject, eventdata, handles);
     case handles.data.labelShortcuts
         %% Update the call labels
@@ -539,7 +539,7 @@ prompt = {
     };
 
 dlg_title = 'Set Custom Label Names';
-num_lines=[1,60]; options.Resize='off'; options.WindowStyle='modal'; options.Interpreter='tex';
+num_lines=[1,60]; options.Resize='off'; options.WindowStyle='modal'; options.Interpreter='none';
 old_labels = handles.data.settings.labels;
 new_labels = inputdlgcol(prompt,dlg_title,num_lines,old_labels,options,3);
 if ~isempty(new_labels)
@@ -580,19 +580,28 @@ function CallClassification_Callback(hObject, eventdata, handles)
 % --------------------------------------------------------------------
 function ChangeContourThreshold_Callback(hObject, eventdata, handles)
 % Change the contour threshold
-prompt = {'Entropy Threshold: (default = 0.215)', 'Amplitude Percentile Threshold: (default = 0.825)'};
+prompt = {'Entropy Threshold: (range = 0-1, default = 0.215)', 'Amplitude Percentile Threshold: (range = 0-1, default = 0.825)'};
 dlg_title = 'New Contour Threshold:';
 num_lines=[1 50]; options.Resize='off'; options.WindowStyle='modal'; options.Interpreter='tex';
 defaultans = {num2str(handles.data.settings.EntropyThreshold),num2str(handles.data.settings.AmplitudeThreshold)};
 threshold = inputdlg(prompt,dlg_title,num_lines,defaultans);
 if isempty(threshold); return; end
 
-[Tonality,~,errmsg] = sscanf(threshold{1},'%f',1);
+[EntropyThreshold,~,errmsg] = sscanf(threshold{1},'%f',1);
 disp(errmsg);
-[Amplitude,~,errmsg] = sscanf(threshold{2},'%f',1);
+[AmplitudeThreshold,~,errmsg] = sscanf(threshold{2},'%f',1);
 disp(errmsg);
 
-if ~isempty(Tonality) && ~isempty(Amplitude)
+if ~isempty(EntropyThreshold) && ~isempty(AmplitudeThreshold)
+
+    if AmplitudeThreshold < .001 || AmplitudeThreshold > .999
+        disp('Warning! Amplitude Percentile Threshold Must be (0 > 1), Reverting to Default (.825)');
+        AmplitudeThreshold = handles.data.defaultSettings.AmplitudeThreshold;
+    end
+    if EntropyThreshold < .001 || EntropyThreshold > .999
+        disp('Warning! Entropy Threshold Must be (0 > 1), Reverting to Default (.215)');
+        EntropyThreshold = handles.data.defaultSettings.EntropyThreshold;
+    end
 
     % Add option to apply to all or just current det
     answer = questdlg('Would you like to apply these settings to all detections?', ...
@@ -601,8 +610,8 @@ if ~isempty(Tonality) && ~isempty(Amplitude)
     % Handle response
     switch answer
         case 'All Detections'
-            handles.data.calls.EntThresh(:) = Tonality;
-            handles.data.calls.AmpThresh(:) = Amplitude;
+            handles.data.calls.EntThresh(:) = EntropyThreshold;
+            handles.data.calls.AmpThresh(:) = AmplitudeThreshold;
             if height(handles.data.calls) > 0
                 % Store actual current call for reset
                 thiscc = handles.data.currentcall;
@@ -621,12 +630,12 @@ if ~isempty(Tonality) && ~isempty(Amplitude)
             end
             
             %Save global settings in settings.mat
-            handles.data.settings.EntropyThreshold = Tonality;
-            handles.data.settings.AmplitudeThreshold = Amplitude;
+            handles.data.settings.EntropyThreshold = EntropyThreshold;
+            handles.data.settings.AmplitudeThreshold = AmplitudeThreshold;
             handles.data.saveSettings();
         case 'Only This Detection'
-            handles.data.calls.EntThresh(handles.data.currentcall) = Tonality;
-            handles.data.calls.AmpThresh(handles.data.currentcall) = Amplitude;
+            handles.data.calls.EntThresh(handles.data.currentcall) = EntropyThreshold;
+            handles.data.calls.AmpThresh(handles.data.currentcall) = AmplitudeThreshold;
             
             %Do NOT save global settings in settings.mat
         % If close (X) or Esc, cancel whole operation
@@ -936,3 +945,24 @@ function waveformWindow_CreateFcn(hObject, eventdata, handles)
 
 % Hint: place code in OpeningFcn to populate waveformWindow
 
+
+% --------------------------------------------------------------------
+function Keyboard_Shortcuts_Callback(hObject, eventdata, handles)
+% Display a list of keyboard shortcuts
+Keyboard_Shortcuts = [
+    "Save file", "ctrl + s"
+    "Next call", "e, right arrow"
+    "Previous call", "q, left arrow"
+    "Accept call", "a"
+    "Reject call", "r"
+    "Delete call", "delete"
+    "Redraw box", "d"
+    "Play call audio", "p"
+    "Set call label", "See ""Add Custom Labels"""
+    "Slide foucs forward", "up arrow"
+    "Slide foucs back", "down arrow"
+    "Next page", "space"
+    ];
+CreateStruct.Interpreter = 'tex';
+CreateStruct.WindowStyle = 'modal';
+msgbox(['\fontname{Courier}\fontsize{12}' sprintf('%-20s |   %s\n', Keyboard_Shortcuts')], 'Keyboard Shortcuts', CreateStruct)
