@@ -22,10 +22,7 @@ end
 
 % % Get index of the time points where aplitude is greater than theshold
 % % iteratively lower threshholds until at least 6 points are selected
-
 [amplitude,ridgeFreq] = max(I,[],1);
-%amplitude = smooth(amplitude,0.1,'rlowess')';
-
 iter = 1;
 greaterthannoise = false(1, size(I, 2));
 while sum(greaterthannoise)<5
@@ -65,10 +62,8 @@ spectrange = SampleRate / 2000; % get frequency range of spectrogram in KHz
 FreqScale = spectrange / (1 + floor(nfft / 2)); % kHz per pixel
 TimeScale = (windowsize - noverlap) / SampleRate; % seconds per pixel
 
-
 %% Frequency gradient of spectrogram
 [~, stats.FilteredImage] = imgradientxy(I);
-
 
 %% Signal to Noise Ratio
 stats.SignalToNoise = mean(1 - stats.Entropy(stats.ridgeTime));
