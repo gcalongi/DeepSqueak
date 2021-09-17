@@ -612,22 +612,24 @@ if ~isempty(EntropyThreshold) && ~isempty(AmplitudeThreshold)
         case 'All Detections'
             handles.data.calls.EntThresh(:) = EntropyThreshold;
             handles.data.calls.AmpThresh(:) = AmplitudeThreshold;
-            if height(handles.data.calls) > 0
-                % Store actual current call for reset
-                thiscc = handles.data.currentcall;
-                % Start at and update Call 1
-                handles.data.currentcall=1;
-                handles.data.focusCenter = handles.data.calls.Box(handles.data.currentcall,1) + handles.data.calls.Box(handles.data.currentcall,3)/2;
-                update_fig(hObject, eventdata, handles);
-                % Cycle through all calls applying global thresholds
-                for cc = 1:height(handles.data.calls)-1
-                    NextCall_Callback(hObject, eventdata, handles)
-                end
-                % Reset
-                handles.data.currentcall = thiscc;
-                handles.data.focusCenter = handles.data.calls.Box(handles.data.currentcall,1) + handles.data.calls.Box(handles.data.currentcall,3)/2;
-                update_fig(hObject, eventdata, handles);
-            end
+            %Took all this out because Power is gone so this shouldn't be
+            %necessary
+%             if height(handles.data.calls) > 0
+%                 % Store actual current call for reset
+%                 thiscc = handles.data.currentcall;
+%                 % Start at and update Call 1
+%                 handles.data.currentcall=1;
+%                 handles.data.focusCenter = handles.data.calls.Box(handles.data.currentcall,1) + handles.data.calls.Box(handles.data.currentcall,3)/2;
+%                 update_fig(hObject, eventdata, handles);
+%                 % Cycle through all calls applying global thresholds
+%                 for cc = 1:height(handles.data.calls)-1
+%                     NextCall_Callback(hObject, eventdata, handles)
+%                 end
+%                 % Reset
+%                 handles.data.currentcall = thiscc;
+%                 handles.data.focusCenter = handles.data.calls.Box(handles.data.currentcall,1) + handles.data.calls.Box(handles.data.currentcall,3)/2;
+%                 update_fig(hObject, eventdata, handles);
+%             end
             
             %Save global settings in settings.mat
             handles.data.settings.EntropyThreshold = EntropyThreshold;
