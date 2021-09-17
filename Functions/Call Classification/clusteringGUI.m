@@ -240,6 +240,20 @@ classdef clusteringGUI < handle
             freqdata = linspace(freqRange(2) ,freqRange(1), obj.thumbnail_size(1));
             colorMask = interp1(linspace(obj.minfreq, obj.maxfreq, size(obj.ColorData,1)), obj.ColorData, freqdata, 'nearest', 'extrap');
             colorIM = im .* colorMask ./ 255;
+            
+            if any(strcmp('NumContPts',ClusteringData.Properties.VariableNames))
+                %Overlay the contour used for the k-means clustering
+                resz = new_size/im_size;            
+                contourfreq = cell2mat(cellfun(@(x) imresize(x',[1 ClusteringData.NumContPts(clustIndex(callID))]) ,table2cell(obj.ClusteringData(clustIndex(callID),'xFreq')),'UniformOutput',0));
+                contourtime = cell2mat(cellfun(@(x) imresize(x',[ClusteringData.NumContPts(clustIndex(callID)) 1]) ,table2cell(obj.ClusteringData(clustIndex(callID),'xTime')),'UniformOutput',0))';
+                ploty = resz*contourfreq/ClusteringData.FreqScale(clustIndex(callID))+pad(1);
+                ploty = size(colorIM,1)-ploty;
+                plotx = resz*contourtime/ClusteringData.TimeScale(clustIndex(callID))+pad(2);
+
+                for i = 1:length(ploty)
+                    colorIM(int16(ploty(i)):int16(ploty(i))+1,int16(plotx(i)):int16(plotx(i))+1,:) = colorIM(int16(ploty(i)):int16(ploty(i))+1,int16(plotx(i)):int16(plotx(i))+1,:)+0.75;
+                end
+            end
         end
         
         function obj = config_axis(obj, axis_handles,i, rel_x, rel_y)

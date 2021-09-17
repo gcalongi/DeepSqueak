@@ -30,6 +30,7 @@ while ~finished
                             slope_weight = str2double(clusterParameters{2});
                             freq_weight = str2double(clusterParameters{3});
                             duration_weight = str2double(clusterParameters{4});
+                            ClusteringData{:,'NumContPts'} = num_pts;
                             data = get_kmeans_data(ClusteringData, num_pts, slope_weight, freq_weight, duration_weight);
                         case 'Variational Autoencoder'
                             [encoderNet, decoderNet, options, ClusteringData] = create_VAE_model(handles);
@@ -54,6 +55,7 @@ while ~finished
                             if exist('num_pts','var') ~= 1
                                 num_pts = 12;
                             end
+                            ClusteringData.NumContPts = num_pts;
                             data = get_kmeans_data(ClusteringData, num_pts, slope_weight, freq_weight, duration_weight);
                         case 'Variational Autoencoder'
                             C = [];
