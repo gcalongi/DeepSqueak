@@ -961,8 +961,8 @@ Keyboard_Shortcuts = [
     "Redraw box", "d"
     "Play call audio", "p"
     "Set call label", "See ""Add Custom Labels"", double click"
-    "Slide foucs forward", "up arrow"
-    "Slide foucs back", "down arrow"
+    "Slide focus forward", "up arrow"
+    "Slide focus back", "down arrow"
     "Next page", "space"
     ];
 CreateStruct.Interpreter = 'tex';
