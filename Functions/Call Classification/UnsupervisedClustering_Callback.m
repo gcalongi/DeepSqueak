@@ -224,7 +224,7 @@ end
 
 function C = get_kmeans_centroids(data)
 % Make a k-means model and return the centroids
-optimize = questdlg('Optimize Cluster Number?','Cluster Optimization','Elbow Optimized','User Defined','Elbow Optimized');
+optimize = questdlg('Optimize Cluster Number?','Cluster Optimization','Elbow Optimized','Elbow w/ Min Clust Size','User Defined','Elbow Optimized');
 C = [];
 switch optimize
     case 'Elbow Optimized'
@@ -236,6 +236,28 @@ switch optimize
             opt_options{1} = num2str(size(data,1));
         end
         [~,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
+        
+    case 'Elbow w/ Min Clust Size'
+        opt_options = inputdlg({'Max Clusters','Replicates','Min Clust Size'},'Cluster Optimization',[1 50; 1 50; 1 size(data,1)],{'100','3','1'});
+        if isempty(opt_options); return; end
+        
+        %Cap the max clusters to the number of samples.
+        if size(data,1) < str2double(opt_options{1})
+            opt_options{1} = num2str(size(data,1));
+        end
+        [IDX,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
+        Celb = C;
+        [GC,~] = groupcounts(IDX);
+        numcl = length(GC);
+        while min(GC) < str2double(opt_options{3})
+            numcl = numcl - 1;
+            [IDX,C] = kmeans(data,numcl,'Distance','sqeuclidean','Replicates',str2double(opt_options{2}));
+            [GC,~] = groupcounts(IDX);
+        end
+        if numcl == 1
+            warning('Unable to find more than one cluster >= the min cluster size. Proceeding with basic elbow-optimized method.')
+            C = Celb;
+        end
         
     case 'User Defined'
         k = inputdlg({'Choose number of k-means:'},'Cluster with k-means',1,{'15'});
