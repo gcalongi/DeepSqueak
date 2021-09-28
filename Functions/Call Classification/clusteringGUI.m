@@ -418,6 +418,44 @@ classdef clusteringGUI < handle
                     switch hObject.String
                         case 'Save'
                             obj.finished = 1;
+                            
+                            % Save the cluster images
+                            saveChoice =  questdlg('Save file with Cluster Images? (NOT recommended for big datasets)','Save images','Yes','No','No');
+                            switch saveChoice
+                                case 'Yes'
+                                    % Start at beginning
+                                    obj.currentCluster = 1;
+                                    obj.page = 1;
+                                    obj.plotimages();
+                                    %montarr = {};
+                                    
+                                    % Cycle through all clusters
+                                    numclusts = length(obj.clusterName);
+                                    for i = 1:numclusts
+                                    %while obj.currentCluster <= length(obj.clusterName)
+                                        % Save current display
+%                                         [thisim,~] = frame2im(getframe(obj.fig));
+%                                         montarr = [montarr, thisim];
+                                        thisfnm = ['ClusteringImg_',num2str(obj.currentCluster),'_',num2str(obj.page),'.png'];
+                                        saveas(obj.fig,thisfnm);
+                                        % Cycle through all pages for that
+                                        % cluster
+                                        numpgs = ceil(obj.count(obj.currentCluster) / length(obj.image_axes));
+                                        for j = 1:numpgs-1
+                                        %while obj.page < ceil(obj.count(obj.currentCluster) / length(obj.image_axes))
+                                            % Next page
+                                            nextpage_Callback(obj, hObject, eventdata);
+                                            % Save current display
+%                                             [thisim,~] = frame2im(getframe(obj.fig));
+%                                             montarr = [montarr, thisim];
+                                            thisfnm = ['ClusteringImg_',num2str(obj.currentCluster),'_',num2str(obj.page),'.png'];
+                                            saveas(obj.fig,thisfnm);
+                                        end
+                                        % Next cluster
+                                        next_Callback(obj, hObject, eventdata);
+                                    end
+                                case 'No'
+                            end
                         case 'Redo'
                             obj.finished = 0;
                     end
