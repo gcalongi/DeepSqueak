@@ -78,7 +78,7 @@ while ~finished
                             end
                     end
             end
-            [clustAssign,D] = knnsearch(C,data,'Distance','seuclidean');
+            [clustAssign,D] = knnsearch(C,data,'Distance','euclidean');
             
             %% Sort the calls by how close they are to the cluster center
             [~,idx] = sort(D);
