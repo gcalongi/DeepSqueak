@@ -63,7 +63,7 @@ while ~finished
                             if exist('pc_weight','var') ~= 1
                                 pc_weight = 0;
                             end
-                            ClusteringData.NumContPts = num_pts;
+                            ClusteringData{:,'NumContPts'} = num_pts;
                             data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, freq_weight, duration_weight, pc_weight);
                         case 'Variational Autoencoder'
                             C = [];
