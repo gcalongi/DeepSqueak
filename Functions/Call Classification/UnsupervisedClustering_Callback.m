@@ -80,6 +80,21 @@ while ~finished
             end
             [clustAssign,D] = knnsearch(C,data,'Distance','euclidean');
             
+            % Save the cluster images
+            saveChoice =  questdlg('Save Extracted Contours with Cluster Assignments?','Save cluster assignments','Yes','No','No');
+            switch saveChoice
+                case 'Yes'
+                    CDBU = ClusteringData;
+                    ClusteringData{:,'ClustAssign'} = clustAssign;
+                    [FileName,PathName] = uiputfile('Extracted Contours w Clusters.mat','Save contours with cluster assignments');
+                    if FileName ~= 0
+                        save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
+                    end
+                    ClusteringData = CDBU;
+                    clear CDBU
+                case 'No'
+            end
+            
             %% Sort the calls by how close they are to the cluster center
             [~,idx] = sort(D);
             clustAssign = clustAssign(idx);
