@@ -239,6 +239,10 @@ saveChoice =  questdlg('Update files with new clusters?','Save clusters','Yes','
 switch saveChoice
     case 'Yes'
         UpdateCluster(ClusteringData, clustAssign, clusterName, rejected)
+        update_folders(hObject, eventdata, handles);
+        if isfield(handles,'current_detection_file')
+            loadcalls_Callback(hObject, eventdata, handles, true)
+        end
     case 'No'
         return
 end
