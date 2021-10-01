@@ -86,7 +86,11 @@ while ~finished
                 case 'Yes'
                     CDBU = ClusteringData;
                     ClusteringData{:,'ClustAssign'} = clustAssign;
-                    [FileName,PathName] = uiputfile('Extracted Contours w Clusters.mat','Save contours with cluster assignments');
+                    pind = regexp(char(ClusteringData{1,'Filename'}),'\');
+                    pind = pind(end);
+                    pname = char(ClusteringData{1,'Filename'});
+                    pname = pname(1:pind);
+                    [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save contours with cluster assignments');
                     if FileName ~= 0
                         save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
                     end
@@ -193,7 +197,12 @@ end
 if FromExisting(1) == 'N'
     switch choice
         case 'K-means (recommended)'
-            [FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder, 'Clustering Models', 'K-Means Model.mat'), 'Save clustering model');
+            pind = regexp(char(ClusteringData{1,'Filename'}),'\');
+            pind = pind(end);
+            pname = char(ClusteringData{1,'Filename'});
+            pname = pname(1:pind);
+            [FileName, PathName] = uiputfile(fullfile(pname, 'K-Means Model.mat'), 'Save clustering model');
+            %[FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder, 'Clustering Models', 'K-Means Model.mat'), 'Save clustering model');
             if ~isnumeric(FileName)
                 save(fullfile(PathName, FileName), 'C', 'num_pts','RES','freq_weight', 'slope_weight', 'duration_weight', 'pc_weight', 'clusterName', 'spectrogramOptions');
             end

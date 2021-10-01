@@ -437,7 +437,11 @@ classdef clusteringGUI < handle
 %                                         [thisim,~] = frame2im(getframe(obj.fig));
 %                                         montarr = [montarr, thisim];
                                         thisfnm = ['ClusteringImg_',num2str(obj.currentCluster),'_',num2str(obj.page),'.png'];
-                                        saveas(obj.fig,thisfnm);
+                                        pind = regexp(char(obj.ClusteringData{1,'Filename'}),'\');
+                                        pind = pind(end);
+                                        pname = char(obj.ClusteringData{1,'Filename'});
+                                        pname = pname(1:pind);
+                                        saveas(obj.fig,fullfile(pname,thisfnm));
                                         % Cycle through all pages for that
                                         % cluster
                                         numpgs = ceil(obj.count(obj.currentCluster) / length(obj.image_axes));
@@ -449,7 +453,11 @@ classdef clusteringGUI < handle
 %                                             [thisim,~] = frame2im(getframe(obj.fig));
 %                                             montarr = [montarr, thisim];
                                             thisfnm = ['ClusteringImg_',num2str(obj.currentCluster),'_',num2str(obj.page),'.png'];
-                                            saveas(obj.fig,thisfnm);
+                                            pind = regexp(char(obj.ClusteringData{1,'Filename'}),'\');
+                                            pind = pind(end);
+                                            pname = char(obj.ClusteringData{1,'Filename'});
+                                            pname = pname(1:pind);
+                                            saveas(obj.fig,fullfile(pname,thisfnm));
                                         end
                                         % Next cluster
                                         next_Callback(obj, hObject, eventdata);

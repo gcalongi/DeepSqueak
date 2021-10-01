@@ -50,6 +50,9 @@ for j = 1:length(fileName)
     [Calls_tmp,  audiodata{j}, loaded_ClusteringData] = loadCallfile(fullfile(filePath,fileName{j}),handles);
     % If the files is extracted contours, rather than a detection file
     if ~isempty(loaded_ClusteringData)
+        if any(strcmp('ClustAssign', loaded_ClusteringData.Properties.VariableNames))
+            loaded_ClusteringData(:,'ClustAssign') = [];
+        end
         ClusteringData = [ClusteringData; table2cell(loaded_ClusteringData)];
         continue
     else
@@ -64,7 +67,7 @@ for j = 1:length(fileName)
 end
 
 % Optimize the window size so that the pixels are square on average
-if isempty(spectrogramOptions)
+if isempty(spectrogramOptions) && ~isempty(Calls)
     yRange = mean(Calls.Box(:,4));
     xRange = mean(Calls.Box(:,3));
     noverlap = .5;
@@ -174,7 +177,11 @@ ClusteringData = cell2table(ClusteringData, 'VariableNames', {'Spectrogram', 'Mi
 close(h)
 
 if p.Results.save_data && ~all(cellfun(@(x) isempty(fields(x)), audiodata)) % If audiodata has no fields, then only extracted contours were used, so don't ask to save them again
-    [FileName,PathName] = uiputfile('Extracted Contours.mat','Save extracted data for faster loading (optional)');
+    pind = regexp(char(ClusteringData{1,'Filename'}),'\');
+    pind = pind(end);
+    pname = char(ClusteringData{1,'Filename'});
+    pname = pname(1:pind);
+    [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save extracted data for faster loading (optional)');
     if FileName ~= 0
         save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
     end
