@@ -99,10 +99,28 @@ while ~finished
                 case 'No'
             end
             
+            %% Save contour used in ClusteringData
+            contourfreqsl = cellfun(@(x) {imresize(x',[1 num_pts+1])}, ClusteringData.xFreq,'UniformOutput',0);
+            contourtimesl = cellfun(@(x) {imresize(x',[1 num_pts+1])}, ClusteringData.xTime,'UniformOutput',0);
+            contourfreq = cellfun(@(x) {imresize(x',[1 num_pts])}, ClusteringData.xFreq,'UniformOutput',0);
+            contourtime = cellfun(@(x) {imresize(x',[1 num_pts])}, ClusteringData.xTime,'UniformOutput',0);
+            
+            ClusteringData(:,'xFreq_Contour_Sl') = contourfreqsl;
+            ClusteringData(:,'xTime_Contour_Sl') = contourtimesl;
+            ClusteringData(:,'xFreq_Contour') = contourfreq;
+            ClusteringData(:,'xTime_Contour') = contourtime;
+            
             %% Sort the calls by how close they are to the cluster center
-            [~,idx] = sort(D);
+            [D,idx] = sort(D);
             clustAssign = clustAssign(idx);
             ClusteringData = ClusteringData(idx,:);
+            ClusteringData.DistToCen = D;
+            ClusteringData.ClustAssign = clustAssign;
+%             for i=1:height(ClusteringData)
+%                 ClusteringData(i,'DistToCen') = {D(i)};
+%                 ClusteringData(i,'ClustAssign') = {clustAssign(i)};
+%             end
+            
             %% Make a montage with the top calls in each class
             try
                 % Find the median call length

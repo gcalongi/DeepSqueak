@@ -166,13 +166,14 @@ for i = 1:height(Calls)
         {FreqScale}
         {TimeScale}
         {0}
+        {Calls.Type(i)}
         ]'];
     
     clustAssign = [clustAssign; Calls.Type(i)];
 end
 
 
-ClusteringData = cell2table(ClusteringData, 'VariableNames', {'Spectrogram', 'MinFreq', 'Duration', 'xFreq', 'xTime', 'Filename', 'callID', 'Power', 'Bandwidth','FreqScale','TimeScale','NumContPts'});
+ClusteringData = cell2table(ClusteringData, 'VariableNames', {'Spectrogram', 'MinFreq', 'Duration', 'xFreq', 'xTime', 'Filename', 'callID', 'Power', 'Bandwidth','FreqScale','TimeScale','NumContPts','Type'});
 
 close(h)
 
