@@ -259,7 +259,7 @@ classdef clusteringGUI < handle
                 plotx = resz*contourtime/ClusteringData.TimeScale(clustIndex(callID))+pad(2);
 
                 for i = 1:length(ploty)
-                    colorIM(int16(ploty(i)):int16(ploty(i))+1,int16(plotx(i)):int16(plotx(i))+1,:) = colorIM(int16(ploty(i)):int16(ploty(i))+1,int16(plotx(i)):int16(plotx(i))+1,:)+0.75;
+                    colorIM(int16(ploty(i)):int16(ploty(i))+1,int16(plotx(i)):int16(plotx(i))+5,:) = colorIM(int16(ploty(i)):int16(ploty(i))+1,int16(plotx(i)):int16(plotx(i))+5,:)+0.75;
                 end
             end
         end
