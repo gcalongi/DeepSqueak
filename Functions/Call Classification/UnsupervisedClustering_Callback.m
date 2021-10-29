@@ -317,9 +317,15 @@ switch optimize
         end
         
     case 'User Defined'
-        k = inputdlg({'Choose number of k-means:'},'Cluster with k-means',1,{'15'});
-        if isempty(k); return; end
-        k = str2double(k{1});
-        [~, C] = kmeans(data,k,'Distance','sqeuclidean','Replicates',10);
+        opt_options = inputdlg({'# of Clusters','Replicates'},'Cluster with k-means',[1; 1],{'15','10'});
+        %k = inputdlg({'Choose number of k-means:'},'Cluster with k-means',1,{'15'});
+        if isempty(opt_options); return; end
+        k = str2double(opt_options{1});
+        nReps = str2double(opt_options{2});
+        if bBinary
+            [~, C] = kmeans(data,k,'Distance','hamming','Replicates',nReps);
+        else
+            [~, C] = kmeans(data,k,'Distance','sqeuclidean','Replicates',nReps);
+        end
 end
 end
