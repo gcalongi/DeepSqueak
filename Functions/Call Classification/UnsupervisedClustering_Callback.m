@@ -32,6 +32,20 @@ while ~finished
                             duration_weight = str2double(clusterParameters{4});
                             RES = str2double(clusterParameters{5});
                             pc_weight = str2double(clusterParameters{6});
+                            % For binary Parsons
+                            if pc_weight > 0 && ((freq_weight+slope_weight+duration_weight) ~= 0)
+                                optimize = questdlg('Parsons Weight can > 0 only if Other Weights = 0 and vice versa!','WARNING: Parsons must be run alone!',...
+                                    'Parsons Weight = 1, Others = 0','Parsons Weight = 0','Parsons Weight = 1, Others = 0');
+                                switch optimize
+                                    case 'Parsons Weight = 1, Others = 0'
+                                        pc_weight = 1;
+                                        freq_weight = 0;
+                                        slope_weight = 0;
+                                        duration_weight = 0;
+                                    case 'Parsons Weight = 0'
+                                        pc_weight = 0;
+                                end
+                            end
                             ClusteringData{:,'NumContPts'} = num_pts;
                             data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, freq_weight, duration_weight, pc_weight);
                         case 'Variational Autoencoder'
@@ -40,7 +54,7 @@ while ~finished
                     end
                     
                     % Make a k-means model and return the centroids
-                    C = get_kmeans_centroids(data);
+                    C = get_kmeans_centroids(data,pc_weight>0);
                     if isempty(C); return; end
                     
                 case 'Yes'
@@ -74,7 +88,7 @@ while ~finished
                             
                             % If the model was created through create_tsne_Callback, C won't exist, so make it.
                             if isempty(C)
-                                C = get_kmeans_centroids(data);
+                                C = get_kmeans_centroids(data,pc_weight>0);
                             end
                     end
             end
@@ -265,21 +279,52 @@ MX          = quantile(slope,0.9,'all');
 pc          = round(slope.*(RES/MX));
 pc(pc>RES)  = RES;
 pc(pc<-RES) = -RES;
+
+%Convert Parsons to binary such that the distances between values work out
+%correctly (in this iteration, e.g. I want 3 to be one away from 2, two
+%away from 1, three away from 0, four away from -1, etc).  I do this by
+%setting the min (-RES) = to 1 0 0 0 0, -RES+1 = 1 1 0 0 0, -RES+2 = 1 1 1
+%0 0, etc)
+nbindig     = RES*2+1;
+pcbin       = zeros(size(pc,1),size(pc,2)*nbindig);
+for i = 1:size(pc,2)
+    %# of bins to switch to 1 (depending on distance from min = -RES)
+    ndigone = pc(:,i)+RES+1;
+    for j = 1:size(pcbin,1)
+        for k = 1:ndigone(j)
+            pcbin(j,(i-1)*nbindig+k) = 1;
+        end
+    end
+end
+
 slope       = zscore(slope);
 freq        = cell2mat(cellfun(@(x) imresize(x',[1 num_pts]) ,ClusteringData.xFreq,'UniformOutput',0));
 freq        = zscore(freq);
 duration    = repmat(ClusteringData.Duration,[1 num_pts]);
 duration    = zscore(duration);
-pc          = zscore(pc);
-data = [
-    freq     .*  freq_weight+.001,...
-    slope    .*  slope_weight+.001,...
-    duration .*  duration_weight+.001,...
-    pc       .*  pc_weight+0.001,...
-    ];
+%pc          = zscore(pc);
+pc          = pcbin;
+if pc_weight > 0 && ((freq_weight+slope_weight+duration_weight) ~= 0)
+    error('This should never happen')
+end
+if pc_weight > 0
+    data = pc;
+else
+    data = [
+        freq     .*  freq_weight+.001,...
+        slope    .*  slope_weight+.001,...
+        duration .*  duration_weight+.001,...
+        ];
+end
+% data = [
+%     freq     .*  freq_weight+.001,...
+%     slope    .*  slope_weight+.001,...
+%     duration .*  duration_weight+.001,...
+%     pc       .*  pc_weight+0.001,...
+%     ];
 end
 
-function C = get_kmeans_centroids(data)
+function C = get_kmeans_centroids(data,bBinary)
 % Make a k-means model and return the centroids
 optimize = questdlg('Optimize Cluster Number?','Cluster Optimization','Elbow Optimized','Elbow w/ Min Clust Size','User Defined','Elbow Optimized');
 C = [];
@@ -292,7 +337,11 @@ switch optimize
         if size(data,1) < str2double(opt_options{1})
             opt_options{1} = num2str(size(data,1));
         end
-        [~,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
+        if bBinary
+            [~,C] = kmeans_opt_bin(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
+        else
+            [~,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
+        end
         
     case 'Elbow w/ Min Clust Size'
         opt_options = inputdlg({'Max Clusters','Replicates','Min Clust Size'},'Cluster Optimization',[1 50; 1 50; 1 size(data,1)],{'100','3','1'});
@@ -302,7 +351,11 @@ switch optimize
         if size(data,1) < str2double(opt_options{1})
             opt_options{1} = num2str(size(data,1));
         end
-        [IDX,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
+        if bBinary
+            [IDX,C] = kmeans_opt_bin(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
+        else
+            [IDX,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
+        end
         Celb = C;
         [GC,~] = groupcounts(IDX);
         numcl = length(GC);
@@ -320,6 +373,10 @@ switch optimize
         k = inputdlg({'Choose number of k-means:'},'Cluster with k-means',1,{'15'});
         if isempty(k); return; end
         k = str2double(k{1});
-        [~, C] = kmeans(data,k,'Distance','sqeuclidean','Replicates',10);
+        if bBinary
+            [~, C] = kmeans(data,k,'Distance','hamming','Replicates',10);
+        else
+            [~, C] = kmeans(data,k,'Distance','sqeuclidean','Replicates',10);
+        end
 end
 end
