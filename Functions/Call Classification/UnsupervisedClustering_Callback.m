@@ -92,7 +92,11 @@ while ~finished
                             end
                     end
             end
-            [clustAssign,D] = knnsearch(C,data,'Distance','euclidean');
+            if pc_weight > 0
+                [clustAssign,D] = knnsearch(C,data,'Distance','hamming');
+            else
+                [clustAssign,D] = knnsearch(C,data,'Distance','euclidean');
+            end
             
             ClusteringData.DistToCen = D;
             ClusteringData.ClustAssign = clustAssign;
