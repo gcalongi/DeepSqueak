@@ -322,10 +322,6 @@ switch optimize
         if isempty(opt_options); return; end
         k = str2double(opt_options{1});
         nReps = str2double(opt_options{2});
-        if bBinary
-            [~, C] = kmeans(data,k,'Distance','hamming','Replicates',nReps);
-        else
-            [~, C] = kmeans(data,k,'Distance','sqeuclidean','Replicates',nReps);
-        end
+        [~, C] = kmeans(data,k,'Distance','sqeuclidean','Replicates',nReps);
 end
 end
