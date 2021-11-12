@@ -257,7 +257,10 @@ function data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, freq
 % Parameterize the data for kmeans
 ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
 slope       = diff(ReshapedX,1,2);
-MX          = quantile(slope,0.9,'all');
+%MX          = quantile(slope,0.9,'all');
+%MX          = 2*std(slope,0,'all');
+%MX          = max(slope,[],'all');
+MX          = (max(slope,[],'all')/(RES+1))*RES;
 pc          = round(slope.*(RES/MX));
 pc(pc>RES)  = RES;
 pc(pc<-RES) = -RES;
