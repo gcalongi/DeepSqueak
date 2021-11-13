@@ -293,12 +293,12 @@ MX          = (max(slope,[],'all')/(RES+1))*RES;
 pc          = round(slope.*(RES/MX));
 pc(pc>RES)  = RES;
 pc(pc<-RES) = -RES;
-slope       = zscore(slope);
+slope       = zscore(slope,0,'all');
 freq        = cell2mat(cellfun(@(x) imresize(x',[1 num_pts]) ,ClusteringData.xFreq,'UniformOutput',0));
-freq        = zscore(freq);
+freq        = zscore(freq,0,'all');
 duration    = repmat(ClusteringData.Duration,[1 num_pts]);
-duration    = zscore(duration);
-pc          = zscore(pc);
+duration    = zscore(duration,0,'all');
+pc          = zscore(pc,0,'all');
 data = [
     freq     .*  freq_weight+.001,...
     slope    .*  slope_weight+.001,...
