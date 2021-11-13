@@ -94,7 +94,7 @@ while ~finished
             ClusteringData(:,'xFreq_Contour') = contourfreq;
             ClusteringData(:,'xTime_Contour') = contourtime;
             
-            % Save the cluster images
+            % Save the cluster assignments
             saveChoice =  questdlg('Save Extracted Contours with Cluster Assignments?','Save cluster assignments','Yes','No','No');
             switch saveChoice
                 case 'Yes'
@@ -105,6 +105,31 @@ while ~finished
                     pname = char(ClusteringData{1,'Filename'});
                     pname = pname(1:pind);
                     [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save contours with cluster assignments');
+                    if FileName ~= 0
+                        save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
+                    end
+                    ClusteringData = CDBU;
+                    clear CDBU
+                case 'No'
+            end
+            
+            % Save PC?
+            saveChoice =  questdlg('Save Extracted Contours with Parsons Code?','Save PC','Yes','No','No');
+            switch saveChoice
+                case 'Yes'
+                    CDBU = ClusteringData;
+                    ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
+                    slope       = diff(ReshapedX,1,2);
+                    MX          = (max(slope,[],'all')/(RES+1))*RES;
+                    pc          = round(slope.*(RES/MX));
+                    pc(pc>RES)  = RES;
+                    pc(pc<-RES) = -RES;
+                    ClusteringData{:,'Parsons'} = pc;
+                    pind = regexp(char(ClusteringData{1,'Filename'}),'\');
+                    pind = pind(end);
+                    pname = char(ClusteringData{1,'Filename'});
+                    pname = pname(1:pind);
+                    [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save contours with Parsons Code');
                     if FileName ~= 0
                         save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
                     end
