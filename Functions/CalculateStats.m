@@ -52,7 +52,10 @@ stats.ridgeTime = find(greaterthannoise);
 stats.ridgeFreq = ridgeFreq(greaterthannoise);
 % Smoothed frequency of the call contour
 try
-    stats.ridgeFreq_smooth = smooth(stats.ridgeTime,stats.ridgeFreq,0.1,'rlowess');
+    %GA211211: the "r" in "rlowess" is messing up when it is fed our
+    %too-perfect artificial whistles
+    %stats.ridgeFreq_smooth = smooth(stats.ridgeTime,stats.ridgeFreq,0.1,'rlowess');
+    stats.ridgeFreq_smooth = smooth(stats.ridgeTime,stats.ridgeFreq,0.1,'lowess');
     %stats.ridgeFreq_smooth = stats.ridgeFreq;
 catch
     disp('Cannot apply smoothing. The line is probably too short');
