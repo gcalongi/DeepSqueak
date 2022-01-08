@@ -236,7 +236,24 @@ while ~finished
         clustAssign = categorical(clustAssign, 1:size(C,1), cellstr(clusterName));
     end
     
-    [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
+    % Standardize clustering GUI image axes?
+    saveChoice =  questdlg('Standardize clustering GUI image axes?','Standardize axes','Yes','No','No');
+    switch saveChoice
+        case 'Yes'
+            CDBU = ClusteringData;
+            %ClusteringData{:,'StandSpec'} = ClusteringData{:,'Spectrogram'};
+            CDDurs = cell2mat(cellfun(@(x) size(x,2),ClusteringData.Spectrogram,'UniformOutput',false));
+            %resz = max(cell2mat(cellfun(@size,ClusteringData.Spectrogram,'UniformOutput',false)));
+            pad = num2cell([zeros(size(CDDurs,1),1) max(CDDurs)-CDDurs],2);
+            ClusteringData.Spectrogram = cellfun(@(x,y) padarray(x, y, 255, 'post'),ClusteringData.Spectrogram,pad,'UniformOutput',false);
+            [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
+            ClusteringData = CDBU;
+            clear CDBU CDDurs pad
+        case 'No'
+             [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);%, ...
+                 %[str2double(handles.data.settings.detectionSettings{3}) str2double(handles.data.settings.detectionSettings{2})]);
+    end
+    
     
 end
 %% Update Files
