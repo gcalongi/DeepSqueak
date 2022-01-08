@@ -242,9 +242,21 @@ while ~finished
         case 'Yes'
             CDBU = ClusteringData;
             %ClusteringData{:,'StandSpec'} = ClusteringData{:,'Spectrogram'};
-            CDDurs = cell2mat(cellfun(@(x) size(x,2),ClusteringData.Spectrogram,'UniformOutput',false));
+            if length(unique(ClusteringData.TimeScale)) > 1
+                warning('%s\n%s\n%s',...
+                    'WARNING: It looks like the spectrograms in this collection were not run consistently.',...
+                    'This may be because you are loading multiple Extracted Contours that were run separately.',...
+                    'Recommend running the original detection mats instead or the Clustering GUI images may look weird.')
+                bProceed = questdlg('Do you wish to proceed anyway?','Yes','No','No');
+                if strcmp(bProceed,'No')
+                    error('You chose to stop.')
+                end
+            end
+            CDDurs = cell2mat(cellfun(@(x) size(x,2),ClusteringData.Spectrogram,'UniformOutput',false)).*ClusteringData.TimeScale;
             %resz = max(cell2mat(cellfun(@size,ClusteringData.Spectrogram,'UniformOutput',false)));
-            pad = num2cell([zeros(size(CDDurs,1),1) max(CDDurs)-CDDurs],2);
+            pad = [zeros(size(CDDurs,1),1) max(CDDurs)-CDDurs];
+            pad = floor(pad./ClusteringData.TimeScale);
+            pad = num2cell(pad,2);
             ClusteringData.Spectrogram = cellfun(@(x,y) padarray(x, y, 255, 'post'),ClusteringData.Spectrogram,pad,'UniformOutput',false);
             [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
             ClusteringData = CDBU;
