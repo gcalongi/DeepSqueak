@@ -1,4 +1,8 @@
-function savesession_Callback(hObject, eventdata, handles)
+function savesession_Callback(hObject, eventdata, handles, bAuto)
+
+if nargin < 4
+    bAuto = false;
+end
 
 handles.v_det = get(handles. popupmenuDetectionFiles,'Value');
 if isfield(handles,'current_detection_file')
@@ -14,7 +18,12 @@ guidata(hObject, handles);
 
 Calls = handles.data.calls;
 audiodata = handles.data.audiodata;
-[FileName, PathName] = uiputfile(fullfile(handles.data.settings.detectionfolder, handles.SaveFile), 'Save Session (.mat)');
+if bAuto
+    FileName = handles.SaveFile;
+    PathName = handles.data.settings.detectionfolder;
+else
+    [FileName, PathName] = uiputfile(fullfile(handles.data.settings.detectionfolder, handles.SaveFile), 'Save Session (.mat)');
+end
 if FileName == 0
     return
 end

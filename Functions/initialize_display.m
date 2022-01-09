@@ -155,5 +155,5 @@ if bApplyGlobal
 %     handles.data.currentcall = 1;
 %     close(h);
     disp('Saving file with globally-applied Entropy and Amplitude Thresholds for each call...')
-    savesession_Callback(hObject, eventdata, handles);
+    savesession_Callback(hObject, eventdata, handles, true);
 end
