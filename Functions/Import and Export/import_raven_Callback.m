@@ -19,6 +19,9 @@ audiodir = [dir([audiopath '\*.wav']); ...
     dir([audiopath '\*.mp4'])];
 outpath = uigetdir(ravenpath,'Select Directory To Save Output Files (WARNING: Will Overwrite)');
 
+if ischar(ravenname)
+    ravenname = {ravenname};
+end
 audioname = cell(size(ravenname));
 for i = 1:length(ravenname)
     [datetime,~] = regexp(ravenname{i},'([0-9]{6}).*([0-9]{6})','tokens','match');
@@ -49,6 +52,8 @@ for i = 1:length(ravenname)
             '*.m4a;*.mp4' 'MPEG-4 AAC'
             }, 'Select Audio File',handles.data.settings.audiofolder);
         audioname = {audioname};
+        ravenname = {ravenname};
+        break;
     else
         audioname{i} = audiodir(audiomatch).name;
     end
