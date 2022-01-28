@@ -373,7 +373,7 @@ switch optimize
         [~,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
         
     case 'Elbow w/ Min Clust Size'
-        opt_options = inputdlg({'Max Clusters','Replicates','Min Clust Size'},'Cluster Optimization',[1 50; 1 50; 1 size(data,1)],{'100','3','1'});
+        opt_options = inputdlg({'Max Clusters','Replicates','Min Clust Size'},'Cluster Optimization',[1 50; 1 50; 1 50],{'100','3','1'});
         if isempty(opt_options); return; end
         
         %Cap the max clusters to the number of samples.
