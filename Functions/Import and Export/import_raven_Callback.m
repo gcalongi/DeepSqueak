@@ -169,7 +169,7 @@ for i = 1:length(ravenname)
 
         [~ ,FileName] = fileparts(audioname{i}{j});
         %[FileName, PathName] = uiputfile(fullfile(handles.data.settings.detectionfolder, [name '.mat']),'Save Call File');
-        save(fullfile(outpath,[FileName '.mat']),'Calls', 'audiodata','-v7.3');
+        save(fullfile(outpath,[FileName '_Detections.mat']),'Calls', 'audiodata','-v7.3');
         close(hc);
     end
 end

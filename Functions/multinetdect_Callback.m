@@ -113,9 +113,9 @@ for j = 1:length(audioselections)
     
     % Append date to filename
     if Settings(5)
-        fname = fullfile(handles.data.settings.detectionfolder,[audioname ' ' detectiontime '.mat']);
+        fname = fullfile(handles.data.settings.detectionfolder,[audioname ' ' detectiontime '_Detections.mat']);
     else
-        fname = fullfile(handles.data.settings.detectionfolder,[audioname '.mat']);
+        fname = fullfile(handles.data.settings.detectionfolder,[audioname '_Detections.mat']);
     end
     
     % Display the number of calls

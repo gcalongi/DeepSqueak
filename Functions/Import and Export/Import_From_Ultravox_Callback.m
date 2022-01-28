@@ -62,7 +62,7 @@ end
 close(hc);
 Calls = struct2table(Calls);
 
-[FileName, PathName] = uiputfile(fullfile(handles.data.settings.detectionfolder, '*.mat'), 'Save Call File');
+[FileName, PathName] = uiputfile(fullfile(handles.data.settings.detectionfolder, strrep(ultravoxName,'.txt','_Detections.mat')), 'Save Call File');
 filename = fullfile(PathName,FileName);
 
 Calls = merge_boxes(Calls.Box, Calls.Score, Calls.Type, audiodata, 1, 0, 0);
