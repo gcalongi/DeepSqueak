@@ -35,9 +35,9 @@ switch choice
     case 'Yes'
         [NetName, NetPath] = uigetfile(handles.data.settings.networkfolder,'Select Existing Network');
         load([NetPath NetName],'detector');
-        [detector, layers, options] = TrainSqueakDetector(TrainingTables,detector);
+        [detector, layers, options, info] = TrainSqueakDetector(TrainingTables,detector);
     case 'No'
-        [detector, layers, options] = TrainSqueakDetector(TrainingTables);
+        [detector, layers, options, info] = TrainSqueakDetector(TrainingTables);
 end
 
 %% Save the new network
@@ -47,7 +47,7 @@ noverlap = max(AllSettings(:,2));
 nfft = max(AllSettings(:,3));
 
 version = handles.DSVersion;
-save(fullfile(PathName,FileName),'detector','layers','options','wind','noverlap','nfft','version','imLength');
+save(fullfile(PathName,FileName),'detector','layers','options','info','wind','noverlap','nfft','version','imLength');
 
 %% Update the menu
 update_folders(hObject, eventdata, handles);
