@@ -1,4 +1,4 @@
-function [detector lgraph options] = TrainSqueakDetector(TrainingTables,layers)
+function [detector, lgraph, options, info] = TrainSqueakDetector(TrainingTables, layers)
 
 % Estimate Anchor Boxes
 blds = boxLabelDatastore(TrainingTables(:,2:end));
