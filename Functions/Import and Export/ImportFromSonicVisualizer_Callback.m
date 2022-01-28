@@ -45,7 +45,7 @@ audiodata = audioinfo(fullfile(audiopath, audioname));
 
 % FileName = [audio_file_name, datestr(datetime('now'),'mmm-dd-yyyy hh_MM AM'), ' ',box_file_name, '.mat'];
 % FilePath = [handles.data.settings.detectionfolder, FileName];
-[FileName, PathName] = uiputfile(fullfile(handles.data.settings.detectionfolder, [box_file_name '.mat']),'Save Call File');
+[FileName, PathName] = uiputfile(fullfile(handles.data.settings.detectionfolder, [box_file_name '_Detections.mat']),'Save Call File');
 FilePath = [handles.data.settings.detectionfolder, FileName];
 save(FilePath,'Calls','audiodata','-v7.3');
 close(hc);

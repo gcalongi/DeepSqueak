@@ -5,7 +5,7 @@ if isfield(handles,'current_detection_file')
     handles.SaveFile = handles.detectionfiles(handles.v_det).name;
     handles.SaveFile = handles.current_detection_file;
 else
-    handles.SaveFile = [strtok(handles.audiofiles(handles.v_det).name,'.') '.mat'];
+    handles.SaveFile = [strtok(handles.audiofiles(handles.v_det).name,'.') '_Detections.mat'];
 end
 
 % temp = handles.data.audiodata.samples;

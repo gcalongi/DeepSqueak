@@ -49,7 +49,7 @@ Calls = table(Box,Score,Accept,Type,'VariableNames',{'Box','Score','Accept','Typ
 
 
 [~ ,name] = fileparts(audioname);
-[FileName, PathName] = uiputfile(fullfile(handles.data.settings.detectionfolder, [name '.mat']),'Save Call File');
+[FileName, PathName] = uiputfile(fullfile(handles.data.settings.detectionfolder, [name '_Detections.mat']),'Save Call File');
 save([PathName,FileName],'Calls', 'audiodata','-v7.3');
 close(hc);
 update_folders(hObject, eventdata, handles);
