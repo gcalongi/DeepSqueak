@@ -123,7 +123,7 @@ for k = 1:length(trainingdata)
         waitbar(bin/length(unique(bins)), h, sprintf('Processing File %g of %g', k, length(trainingdata)));        
         
     end
-    save(fullfile(handles.data.squeakfolder,'Training',[filename '.mat']),'TTable','wind','noverlap','nfft','imLength');
+    save(fullfile(handles.data.squeakfolder,'Training',[filename '_Images.mat']),'TTable','wind','noverlap','nfft','imLength');
     disp(['Created ' num2str(height(TTable)) ' Training Images']);
 end
 close(h)
