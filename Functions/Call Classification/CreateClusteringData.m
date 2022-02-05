@@ -175,7 +175,7 @@ for i = 1:height(Calls)
 end
 
 
-ClusteringData = cell2table(ClusteringData(:,1:15), 'VariableNames', {'Spectrogram', 'MinFreq', 'Duration', 'xFreq', 'xTime', 'Filename', 'callID', 'Power', 'Bandwidth','FreqScale','TimeScale','NumContPts','Type','UserID','ClustCat'});
+ClusteringData = cell2table(ClusteringData(:,1:15), 'VariableNames', {'Spectrogram', 'MinFreq', 'Duration', 'xFreq', 'xTime', 'Filename', 'callID', 'Power', 'Bandwidth','FreqScale','TimeScale','NumContPts','Type','UserID','ClustAssign'});
 
 close(h)
 
