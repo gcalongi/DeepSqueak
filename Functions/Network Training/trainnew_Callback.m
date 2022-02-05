@@ -9,6 +9,10 @@ wind = [];
 waitfor(msgbox('Select Image Tables'))
 [trainingdata, trainingpath] = uigetfile(['Training/*.mat'],'Select Training File(s) for Training ','MultiSelect', 'on');
 TrainingTables = [];
+%Return if cancel
+if trainingdata == 0
+    return
+end
 trainingdata = cellstr(trainingdata);
 
 

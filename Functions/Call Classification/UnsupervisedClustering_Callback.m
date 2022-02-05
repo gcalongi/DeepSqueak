@@ -159,20 +159,25 @@ while ~finished
                 maxBandwidth = cellfun(@(spect) size(spect,1), ClusteringData.Spectrogram(i));
                 maxBandwidth = round(prctile(maxBandwidth,75));
                 
+                % Make the figure
+                f_montage = figure('Color','w','Position',[50,50,800,800]);
+                ax_montage = axes(f_montage);
                 % Make the image stack
-                montageI = [];
+                %montageI = [];
+                montTile = tiledlayout('flow','TileSpacing','loose');
                 for i = unique(clustAssign)'
                     index = find(clustAssign==i,1);
                     tmp = ClusteringData.Spectrogram{index,1};
                     tmp = padarray(tmp,[0,max(maxlength-size(tmp,2),0)],'both');
                     tmp = rescale(tmp,1,256);
-                    montageI(:,:,i) = floor(imresize(tmp,[maxBandwidth,maxlength]));
+                    %montageI(:,:,i) = floor(imresize(tmp,[maxBandwidth,maxlength]));
+                    
+                    nexttile
+                    image(imtile(floor(imresize(tmp,[maxBandwidth,maxlength])), inferno, 'BackgroundColor', 'w', 'GridSize',[1 1]))
+                    title(num2str(i))
+                    axis off
                 end
-                % Make the figure
-                f_montage = figure('Color','w','Position',[50,50,800,800]);
-                ax_montage = axes(f_montage);
-                % montageI = cellfun(@(x) rescale(x,0,255), (ClusteringData.Spectrogram(i)), 'UniformOutput', false);
-                image(ax_montage, imtile(montageI, inferno, 'BackgroundColor', 'w', 'BorderSize', 2, 'GridSize',[5 NaN]))
+%                 image(ax_montage, imtile(montageI, inferno, 'BackgroundColor', 'w', 'BorderSize', 2, 'GridSize',[5 NaN]))
                 axis(ax_montage, 'off')
                 title(ax_montage, 'Closest call to each cluster center')
             catch
