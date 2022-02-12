@@ -33,7 +33,18 @@ for i = 1:length(files)
     call_idx = [ClusteringData{cluster_idx, 7}];
 
     % Update call type with cluster names
-    Calls.Type(call_idx) = clustAssign(cluster_idx);
+    Calls.ClustCat(call_idx) = clustAssign(cluster_idx);
+    answer = questdlg('Cluster assignments saved to Calls.ClustCat.  Do you also want to overwrite the "Type" column with the cluster assignments?', ...
+	'Overwrite "Type"', ...
+	'Yes','No','No');
+    % Handle response
+    switch answer
+        case 'Yes'
+            Calls.Type(call_idx) = clustAssign(cluster_idx);
+        case 'No'
+        case ''
+            error('You chose to cancel the operation.')
+    end
 
     % Reject calls classified as 'Noise'
     Calls.Accept(call_idx(rejected(cluster_idx))) = 0;

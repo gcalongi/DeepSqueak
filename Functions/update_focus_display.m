@@ -69,7 +69,17 @@ else
     set(handles.status,'String','Rejected');
     set(handles.status,'ForegroundColor',[1,0,0])       
 end
-set(handles.text19,'String',['Label: ' char(handles.data.calls.Type(handles.data.currentcall))]);
+if any(strcmp('CallID', handles.data.calls.Properties.VariableNames))
+    set(handles.text19,'String',['User ID: ' char(handles.data.calls.CallID(handles.data.currentcall))]);
+else
+    set(handles.text19,'String','User ID: N/A');
+end
+set(handles.text36,'String',['Label: ' char(handles.data.calls.Type(handles.data.currentcall))]);
+if any(strcmp('ClustCat', handles.data.calls.Properties.VariableNames))
+    set(handles.text37,'String',['Clust Assign: ' char(handles.data.calls.ClustCat(handles.data.currentcall))]);
+else
+    set(handles.text37,'String','Clust Assign: N/A');
+end
 set(handles.freq,'String',['Frequency: ' num2str(stats.PrincipalFreq,'%.1f') ' kHz']);
 set(handles.slope,'String',['Slope: ' num2str(stats.Slope,'%.3f') ' kHz/s']);
 set(handles.duration,'String',['Duration: ' num2str(stats.DeltaTime*1000,'%.0f') ' ms']);

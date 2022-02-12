@@ -85,6 +85,7 @@ while ~finished
                             end
                     end
             end
+            
             [clustAssign,D] = knnsearch(C,data,'Distance','euclidean');
             
             ClusteringData.DistToCen = D;
@@ -144,6 +145,36 @@ while ~finished
                     clear CDBU
                 case 'No'
             end
+                        
+            %% Centroid contours
+            if relfreq_weight > 0 && sum([slope_weight, freq_weight, duration_weight, pc_weight]) == 0
+                % Generate relative frequencies
+                allrelfreq = ClusteringData.xFreq_Contour;
+                allrelfreq = cell2mat(allrelfreq);
+                allrelfreq = allrelfreq-allrelfreq(:,1);
+                allrelfreq = zscore(allrelfreq,0,'all');
+                
+                minylim = min(allrelfreq,[],'all');
+                maxylim = max(allrelfreq,[],'all');
+                
+                % Make the figure
+                figure('Color','w','Position',[50,50,800,800]);
+                montTile = tiledlayout('flow','TileSpacing','none');
+                
+                for i = unique(clustAssign)'
+                    thisclust = allrelfreq(ClusteringData.ClustAssign == i,:);
+                    thiscent = C(i,num_pts+1:2*num_pts);
+                
+                    maxcont = max(thisclust,[],1);
+                    mincont = min(thisclust,[],1);
+                    
+                    nexttile
+                    plot(1:num_pts,thiscent,1:num_pts,maxcont,'r--',1:num_pts,mincont,'r--')
+                    ylim([minylim maxylim])
+                end
+                
+                title(montTile, 'Centroid Contours with Max and Min Call Variation')
+            end
             
             %% Sort the calls by how close they are to the cluster center
             [~,idx] = sort(D);
@@ -159,26 +190,34 @@ while ~finished
                 maxBandwidth = cellfun(@(spect) size(spect,1), ClusteringData.Spectrogram(i));
                 maxBandwidth = round(prctile(maxBandwidth,75));
                 
+                % Make the figure
+                figure('Color','w','Position',[50,50,800,800]);
+%                 ax_montage = axes(f_montage);
                 % Make the image stack
-                montageI = [];
+                %montageI = [];
+                montTile = tiledlayout('flow','TileSpacing','none');
                 for i = unique(clustAssign)'
                     index = find(clustAssign==i,1);
                     tmp = ClusteringData.Spectrogram{index,1};
                     tmp = padarray(tmp,[0,max(maxlength-size(tmp,2),0)],'both');
                     tmp = rescale(tmp,1,256);
-                    montageI(:,:,i) = floor(imresize(tmp,[maxBandwidth,maxlength]));
+                    %montageI(:,:,i) = floor(imresize(tmp,[maxBandwidth,maxlength]));
+                    
+                    nexttile
+                    image(imtile(floor(imresize(tmp,[maxBandwidth,maxlength])), inferno, 'BackgroundColor', 'w', 'GridSize',[1 1]))
+                    title(num2str(i))
+                    axis off
                 end
-                % Make the figure
-                f_montage = figure('Color','w','Position',[50,50,800,800]);
-                ax_montage = axes(f_montage);
-                % montageI = cellfun(@(x) rescale(x,0,255), (ClusteringData.Spectrogram(i)), 'UniformOutput', false);
-                image(ax_montage, imtile(montageI, inferno, 'BackgroundColor', 'w', 'BorderSize', 2, 'GridSize',[5 NaN]))
-                axis(ax_montage, 'off')
-                title(ax_montage, 'Closest call to each cluster center')
+%                 image(ax_montage, imtile(montageI, inferno, 'BackgroundColor', 'w', 'BorderSize', 2, 'GridSize',[5 NaN]))
+%                 axis(ax_montage, 'off')
+                title(montTile, 'Closest call to each cluster center')
             catch
                 disp('For some reason, I couldn''t make a montage of the call exemplars')
             end
             
+            %Undo sort
+            clustAssign(idx) = clustAssign;
+            ClusteringData(idx,:) = ClusteringData;
             
         case 'ARTwarp'
             ClusteringData = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
@@ -262,8 +301,8 @@ while ~finished
             ClusteringData = CDBU;
             clear CDBU CDDurs pad
         case 'No'
-             [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);%, ...
-                 %[str2double(handles.data.settings.detectionSettings{3}) str2double(handles.data.settings.detectionSettings{2})]);
+            [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);%, ...
+            %[str2double(handles.data.settings.detectionSettings{3}) str2double(handles.data.settings.detectionSettings{2})]);
     end
     
     
@@ -352,7 +391,7 @@ data = [
     relfreq     .*  relfreq_weight+.001,...
     slope    .*  slope_weight+.001,...
     duration .*  duration_weight+.001,...
-    pc       .*  pc_weight+0.001,...
+    pc       .*  pc_weight+0.001...
 %     pc2       .*  pc2_weight+0.001,...
     ];
 end

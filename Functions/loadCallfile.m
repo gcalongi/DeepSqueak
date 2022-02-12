@@ -13,6 +13,15 @@ elseif nargout < 3 % If ClusteringData is requested, we don't need Calls
     error('This doesn''t appear to be a detection file!')
 end
 
+if ~any(strcmp('CallID', Calls.Properties.VariableNames))
+    Calls.CallID = categorical(1:height(Calls))';
+end
+if ~any(strcmp('ClustCat', Calls.Properties.VariableNames))
+    clustcat = cell(1,height(Calls));
+    clustcat(:) = {'None'};
+    Calls.ClustCat = categorical(clustcat)';
+end
+
 if isfield(data, 'audiodata')
     audiodata = data.audiodata;
 end
