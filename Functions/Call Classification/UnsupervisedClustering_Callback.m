@@ -215,7 +215,7 @@ while ~finished
                 disp('For some reason, I couldn''t make a montage of the call exemplars')
             end
             
-            %Undo sort
+            %% Undo sort
             clustAssign(idx) = clustAssign;
             ClusteringData(idx,:) = ClusteringData;
             
@@ -274,6 +274,11 @@ while ~finished
     if strcmp(choice, 'K-means (recommended)') && strcmp(FromExisting, 'Yes')
         clustAssign = categorical(clustAssign, 1:size(C,1), cellstr(clusterName));
     end
+        
+    %% Sort the calls by how close they are to the cluster center
+    [~,idx] = sort(ClusteringData.DistToCen);
+    clustAssign = clustAssign(idx);
+    ClusteringData = ClusteringData(idx,:);
     
     % Standardize clustering GUI image axes?
     saveChoice =  questdlg('Standardize clustering GUI image axes?','Standardize axes','Yes','No','No');
@@ -305,7 +310,9 @@ while ~finished
             %[str2double(handles.data.settings.detectionSettings{3}) str2double(handles.data.settings.detectionSettings{2})]);
     end
     
-    
+    %% Undo sort
+    clustAssign(idx) = clustAssign;
+    ClusteringData(idx,:) = ClusteringData;
 end
 %% Update Files
 % Save the clustering model

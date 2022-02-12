@@ -50,9 +50,6 @@ for j = 1:length(fileName)
     [Calls_tmp,  audiodata{j}, loaded_ClusteringData] = loadCallfile(fullfile(filePath,fileName{j}),handles);
     % If the files is extracted contours, rather than a detection file
     if ~isempty(loaded_ClusteringData)
-        if any(strcmp('ClustAssign', loaded_ClusteringData.Properties.VariableNames))
-            loaded_ClusteringData(:,'ClustAssign') = [];
-        end
         ClusteringData = [ClusteringData; table2cell(loaded_ClusteringData)];
         continue
     else
