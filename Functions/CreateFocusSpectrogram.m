@@ -9,9 +9,12 @@ end
 if nargin < 4 || isempty(options)
     options = struct;
     options.frequency_padding = 0;
-    options.nfft = 0.0032;
-    options.overlap = 0.0016;
-    options.windowsize = 0.0032;
+%     options.nfft = 0.0032;
+%     options.overlap = 0.0016;
+%     options.windowsize = 0.0032;
+    options.nfft = handles.data.settings.spect.nfft;
+    options.overlap = handles.data.settings.spect.noverlap;
+    options.windowsize = handles.data.settings.spect.windowsize;
     options.freq_range = [];
 end
 
@@ -53,6 +56,10 @@ end
 % audio = handles.data.audiodata.samples(round(window_start):round(window_stop));
 
 rate = audioReader.audiodata.SampleRate;
+if (1/options.nfft > (box(4)*1000))
+    warning('Spectrogram settings may not be ideal for this call - suggest adjusting Display Settings and increasing NFFT')
+end
+
 windowsize = round(rate * options.windowsize);
 noverlap = round(rate * options.overlap);
 nfft = round(rate * options.nfft);
@@ -78,12 +85,16 @@ x1 = 1;
 x2 = length(ti);
 
 min_freq = find(fr./1000 >= box(2) - options.frequency_padding,1);
-min_freq = max(min_freq, 1);
+min_freq = max(min_freq-1, 1);
 
 max_freq = find(fr./1000 <= box(4) + box(2) + options.frequency_padding, 1, 'last');
-max_freq = min(round(max_freq), length(fr));
+max_freq = min(round(max_freq)+1, length(fr));
 
 I=abs(s(min_freq:max_freq,x1:x2));
+
+if isempty(I)
+    error('Something wrong with box')
+end
 
 
 end

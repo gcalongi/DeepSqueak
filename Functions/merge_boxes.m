@@ -67,8 +67,8 @@ end
 % Don't let the calls leave the range of the audio
 begin_time = max(begin_time,0.01);
 end_time__ = min(end_time__,audio_info.Duration);
-lower_freq = max(lower_freq,1);
-high_freq_ = min(high_freq_,audio_info.SampleRate./2000 - 1);
+lower_freq = max(lower_freq,0.001);
+high_freq_ = min(high_freq_,audio_info.SampleRate./2000 - 0.001);
 
 duration__ = end_time__ - begin_time;
 bandwidth_ = high_freq_ - lower_freq;
