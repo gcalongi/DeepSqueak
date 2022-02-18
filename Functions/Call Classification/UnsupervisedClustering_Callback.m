@@ -94,10 +94,15 @@ while ~finished
             ClusteringData.ClustAssign = clustAssign;
             
             %% Save contour used in ClusteringData
-            contourfreqsl = cellfun(@(x) {imresize(x',[1 num_pts+1])}, ClusteringData.xFreq,'UniformOutput',0);
-            contourtimesl = cellfun(@(x) {imresize(x,[1 num_pts+1])}, ClusteringData.xTime,'UniformOutput',0);
-            contourfreq = cellfun(@(x) {imresize(x',[1 num_pts])}, ClusteringData.xFreq,'UniformOutput',0);
-            contourtime = cellfun(@(x) {imresize(x,[1 num_pts])}, ClusteringData.xTime,'UniformOutput',0);
+%             contourfreqsl = cellfun(@(x) {imresize(x',[1 num_pts+1])}, ClusteringData.xFreq,'UniformOutput',0);
+%             contourtimesl = cellfun(@(x) {imresize(x,[1 num_pts+1])}, ClusteringData.xTime,'UniformOutput',0);
+%             contourfreq = cellfun(@(x) {imresize(x',[1 num_pts])}, ClusteringData.xFreq,'UniformOutput',0);
+%             contourtime = cellfun(@(x) {imresize(x,[1 num_pts])}, ClusteringData.xTime,'UniformOutput',0);
+            
+            contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+1)},ClusteringData.xTime,'UniformOutput',false);
+            contourfreqsl = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtimesl,'UniformOutput',false);
+            contourtime = cellfun(@(x) {linspace(min(x),max(x),num_pts)},ClusteringData.xTime,'UniformOutput',false);
+            contourfreq = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtime,'UniformOutput',false);
             
             ClusteringData(:,'xFreq_Contour_Sl') = contourfreqsl;
             ClusteringData(:,'xTime_Contour_Sl') = contourtimesl;
@@ -128,7 +133,8 @@ while ~finished
             switch saveChoice
                 case 'Yes'
                     CDBU = ClusteringData;
-                    ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
+                    %ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
+                    ReshapedX   = cell2mat(ClusteringData.xFreq_Contour_Sl);
                     slope       = diff(ReshapedX,1,2);
                     MX          = (max(slope,[],'all')/(RES+1))*RES;
                     pc          = round(slope.*(RES/MX));
@@ -370,9 +376,14 @@ end
 
 function data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight)%, pc2_weight)
 % Parameterize the data for kmeans
-ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
+%ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
+% Linear interpolation
+timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+1),ClusteringData.xTime,'UniformOutput',false);
+ReshapedX   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
 slope       = diff(ReshapedX,1,2);
-ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+2]) ,ClusteringData.xFreq,'UniformOutput',0));
+%ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+2]) ,ClusteringData.xFreq,'UniformOutput',0));
+timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+2),ClusteringData.xTime,'UniformOutput',false);
+ReshapedX   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
 concav      = diff(ReshapedX,2,2);
 %MX          = quantile(slope,0.9,'all');
 %MX          = 2*std(slope,0,'all');
@@ -383,7 +394,9 @@ pc(pc>RES)  = RES;
 pc(pc<-RES) = -RES;
 slope       = zscore(slope,0,'all');
 concav       = zscore(concav,0,'all');
-freq        = cell2mat(cellfun(@(x) imresize(x',[1 num_pts]) ,ClusteringData.xFreq,'UniformOutput',0));
+%freq        = cell2mat(cellfun(@(x) imresize(x',[1 num_pts]) ,ClusteringData.xFreq,'UniformOutput',0));
+timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts),ClusteringData.xTime,'UniformOutput',false);
+freq   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
 relfreq     = freq-freq(:,1);
 
 % MX2         = (max(relfreq,[],'all')/(RES+1))*RES;

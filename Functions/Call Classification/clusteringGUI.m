@@ -261,8 +261,11 @@ classdef clusteringGUI < handle
             if any(strcmp('NumContPts',ClusteringData.Properties.VariableNames))
                 %Overlay the contour used for the k-means clustering
                 resz = new_size/im_size;            
-                contourfreq = cell2mat(cellfun(@(x) imresize(x',[1 ClusteringData.NumContPts(clustIndex(callID))]) ,table2cell(obj.ClusteringData(clustIndex(callID),'xFreq')),'UniformOutput',0));
-                contourtime = cell2mat(cellfun(@(x) imresize(x',[ClusteringData.NumContPts(clustIndex(callID)) 1]) ,table2cell(obj.ClusteringData(clustIndex(callID),'xTime')),'UniformOutput',0))';
+                %contourfreq = cell2mat(cellfun(@(x) imresize(x',[1 ClusteringData.NumContPts(clustIndex(callID))]) ,table2cell(obj.ClusteringData(clustIndex(callID),'xFreq')),'UniformOutput',0));
+                %contourtime = cell2mat(cellfun(@(x) imresize(x',[ClusteringData.NumContPts(clustIndex(callID)) 1]) ,table2cell(obj.ClusteringData(clustIndex(callID),'xTime')),'UniformOutput',0))';
+                
+                contourtime = cell2mat(obj.ClusteringData.xTime_Contour(clustIndex(callID)));
+                contourfreq = cell2mat(obj.ClusteringData.xFreq_Contour(clustIndex(callID)));
                 ploty = resz*contourfreq/ClusteringData.FreqScale(clustIndex(callID))+pad(1);
                 ploty = size(colorIM,1)-ploty;
                 plotx = resz*contourtime/ClusteringData.TimeScale(clustIndex(callID))+pad(2);
