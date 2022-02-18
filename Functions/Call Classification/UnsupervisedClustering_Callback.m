@@ -24,20 +24,21 @@ while ~finished
                         case 'K-means (recommended)'
                             [ClusteringData, ~, ~, ~, spectrogramOptions] = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
                             if isempty(ClusteringData); return; end
-                            clusterParameters= inputdlg({'Number of Contour Pts','Shape weight','Frequency weight', ...
+                            clusterParameters= inputdlg({'Number of Contour Pts','Shape weight','Concavity weight','Frequency weight', ...
                                 'Relative Frequency weight','Duration weight','Parsons Resolution','Parsons weight'}, ...%,'Parsons2 weight'},
-                                'Choose cluster parameters:',1,{'20','0','0','1','0','4','0'});%,'0'});
+                                'Choose cluster parameters:',1,{'20','0','0','0','1','0','4','0'});%,'0'});
                             if isempty(clusterParameters); return; end
                             num_pts = str2double(clusterParameters{1});
                             slope_weight = str2double(clusterParameters{2});
-                            freq_weight = str2double(clusterParameters{3});
-                            relfreq_weight = str2double(clusterParameters{4});
-                            duration_weight = str2double(clusterParameters{5});
-                            RES = str2double(clusterParameters{6});
-                            pc_weight = str2double(clusterParameters{7});
+                            concav_weight = str2double(clusterParameters{3});
+                            freq_weight = str2double(clusterParameters{4});
+                            relfreq_weight = str2double(clusterParameters{5});
+                            duration_weight = str2double(clusterParameters{6});
+                            RES = str2double(clusterParameters{7});
+                            pc_weight = str2double(clusterParameters{8});
                             %pc2_weight = str2double(clusterParameters{8});
                             ClusteringData{:,'NumContPts'} = num_pts;
-                            data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, freq_weight, relfreq_weight, duration_weight, pc_weight);%, pc2_weight);
+                            data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight);%, pc2_weight);
                         case 'Variational Autoencoder'
                             [encoderNet, decoderNet, options, ClusteringData] = create_VAE_model(handles);
                             data = extract_VAE_embeddings(encoderNet, options, ClusteringData);
@@ -53,25 +54,26 @@ while ~finished
                     switch choice
                         case 'K-means (recommended)'
                             spectrogramOptions = [];
+                            % Preset variables
+                            num_pts = 12;
+                            RES = 1;
+                            freq_weight = 0;
+                            relfreq_weight = 0;
+                            slope_weight = 0;
+                            concav_weight = 0;
+                            duration_weight = 0;
+                            pc_weight = 0;
+                            % Load existing model to replace variables as
+                            % needed
                             load(fullfile(PathName,FileName),'C','num_pts',...
                                 'RES','freq_weight','relfreq_weight','slope_weight',...
-                                'duration_weight','pc_weight',...%'pc2_weight',...
+                                'concav_weight','duration_weight','pc_weight',...%'pc2_weight',...
                                 'clusterName','spectrogramOptions');
                             ClusteringData = CreateClusteringData(handles, 'forClustering', true, 'spectrogramOptions', spectrogramOptions, 'save_data', true);
                             if isempty(ClusteringData); return; end
-                            % Set number of contour pts to default 12 if it
-                            % didn't load as a variable
-                            if exist('num_pts','var') ~= 1
-                                num_pts = 12;
-                            end
-                            if exist('RES','var') ~= 1
-                                RES = 1;
-                            end
-                            if exist('pc_weight','var') ~= 1
-                                pc_weight = 0;
-                            end
+
                             ClusteringData{:,'NumContPts'} = num_pts;
-                            data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, freq_weight, relfreq_weight, duration_weight, pc_weight);%, pc2_weight);
+                            data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight);%, pc2_weight);
                         case 'Variational Autoencoder'
                             C = [];
                             load(fullfile(PathName,FileName),'C','encoderNet','decoderNet','options');
@@ -327,7 +329,7 @@ if FromExisting(1) == 'N'
             %[FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder, 'Clustering Models', 'K-Means Model.mat'), 'Save clustering model');
             if ~isnumeric(FileName)
                 save(fullfile(PathName, FileName), 'C', 'num_pts','RES','freq_weight',...
-                    'relfreq_weight', 'slope_weight', 'duration_weight', 'pc_weight',... % 'pc2_weight',
+                    'relfreq_weight', 'slope_weight', 'concav_weight', 'duration_weight', 'pc_weight',... % 'pc2_weight',
                     'clusterName', 'spectrogramOptions');
             end
         case 'ARTwarp'
@@ -366,10 +368,12 @@ for i = 1:size(ZJ,1)
 end
 end
 
-function data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, freq_weight, relfreq_weight, duration_weight, pc_weight)%, pc2_weight)
+function data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight)%, pc2_weight)
 % Parameterize the data for kmeans
 ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
 slope       = diff(ReshapedX,1,2);
+ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+2]) ,ClusteringData.xFreq,'UniformOutput',0));
+concav      = diff(ReshapedX,2,2);
 %MX          = quantile(slope,0.9,'all');
 %MX          = 2*std(slope,0,'all');
 %MX          = max(slope,[],'all');
@@ -378,6 +382,7 @@ pc          = round(slope.*(RES/MX));
 pc(pc>RES)  = RES;
 pc(pc<-RES) = -RES;
 slope       = zscore(slope,0,'all');
+concav       = zscore(concav,0,'all');
 freq        = cell2mat(cellfun(@(x) imresize(x',[1 num_pts]) ,ClusteringData.xFreq,'UniformOutput',0));
 relfreq     = freq-freq(:,1);
 
@@ -394,11 +399,12 @@ pc          = zscore(pc,0,'all');
 % pc2       = zscore(pc2,0,'all');
 
 data = [
-    freq     .*  freq_weight+.001,...
+    freq        .*  freq_weight+.001,...
     relfreq     .*  relfreq_weight+.001,...
-    slope    .*  slope_weight+.001,...
-    duration .*  duration_weight+.001,...
-    pc       .*  pc_weight+0.001...
+    slope       .*  slope_weight+.001,...
+    concav      .*  concav_weight+.001,...
+    duration    .*  duration_weight+.001,...
+    pc          .*  pc_weight+0.001...
 %     pc2       .*  pc2_weight+0.001,...
     ];
 end
