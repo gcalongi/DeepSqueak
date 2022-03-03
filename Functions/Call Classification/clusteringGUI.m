@@ -269,6 +269,12 @@ classdef clusteringGUI < handle
                 ploty = resz*contourfreq/ClusteringData.FreqScale(clustIndex(callID))+pad(1);
                 ploty = size(colorIM,1)-ploty;
                 plotx = resz*contourtime/ClusteringData.TimeScale(clustIndex(callID))+pad(2);
+                
+                %Limit values for boundary/indexing issues
+                plotx(plotx<1) = 1;
+                ploty(ploty<1) = 1;
+                plotx(plotx>(size(colorIM,2)-5)) = size(colorIM,2)-5;
+                ploty(ploty>(size(colorIM,1)-1)) = size(colorIM,1)-1;
 
                 for i = 1:length(ploty)
                     maxd1 = size(colorIM,1);
