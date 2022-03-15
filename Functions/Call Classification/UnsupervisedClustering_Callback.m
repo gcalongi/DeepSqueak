@@ -172,6 +172,8 @@ while ~finished
                 for i = unique(clustAssign)'
                     thisclust = allrelfreq(ClusteringData.ClustAssign == i,:);
                     thiscent = C(i,num_pts+1:2*num_pts);
+                    % Undo normalization for scaling
+                    thiscent = (thiscent-0.001)./relfreq_weight;
                 
                     maxcont = max(thisclust,[],1);
                     mincont = min(thisclust,[],1);
