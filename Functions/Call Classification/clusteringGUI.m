@@ -26,8 +26,6 @@ classdef clusteringGUI < handle
     methods
         function [obj, NewclusterName, NewRejected, NewFinished, NewClustAssign] = clusteringGUI(clustAssign, ClusteringData)
             
-            
-            
             obj.clustAssign = clustAssign;
             %Image, Lower freq, delta time, Time points, Freq points, File path, Call ID in file, power, RelBox
             obj.ClusteringData = ClusteringData;
@@ -494,7 +492,7 @@ classdef clusteringGUI < handle
                                         % Save current display
 %                                         [thisim,~] = frame2im(getframe(obj.fig));
 %                                         montarr = [montarr, thisim];
-                                        thisfnm = ['ClusteringImg_',num2str(obj.currentCluster),'_',num2str(obj.page),'.png'];
+                                        thisfnm = ['ClusteringImg_',sprintf('%03d',obj.currentCluster),'_',sprintf('%03d',obj.page),'.png'];
                                         pind = regexp(char(obj.ClusteringData{1,'Filename'}),'\');
                                         pind = pind(end);
                                         pname = char(obj.ClusteringData{1,'Filename'});
@@ -510,7 +508,7 @@ classdef clusteringGUI < handle
                                             % Save current display
 %                                             [thisim,~] = frame2im(getframe(obj.fig));
 %                                             montarr = [montarr, thisim];
-                                            thisfnm = ['ClusteringImg_',num2str(obj.currentCluster),'_',num2str(obj.page),'.png'];
+                                            thisfnm = ['ClusteringImg_',sprintf('%03d',obj.currentCluster),'_',sprintf('%03d',obj.page),'.png'];
                                             pind = regexp(char(obj.ClusteringData{1,'Filename'}),'\');
                                             pind = pind(end);
                                             pname = char(obj.ClusteringData{1,'Filename'});
