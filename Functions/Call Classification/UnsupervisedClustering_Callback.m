@@ -162,7 +162,7 @@ while ~finished
                     nexttile
                     plot(1:num_pts,thiscent,1:num_pts,maxcont,'r--',1:num_pts,mincont,'r--')
                     ylim([minylim maxylim])
-                    title(i)
+                    title(sprintf('(%d)  n = %d',i,size(thisclust,1)))
                 end
                 
                 title(montTile, 'Centroid Contours with Max and Min Call Variation')
@@ -435,47 +435,114 @@ end
 
 function C = get_kmeans_centroids(data)
 % Make a k-means model and return the centroids
-optimize = questdlg('Optimize Cluster Number?','Cluster Optimization','Elbow Optimized','Elbow w/ Min Clust Size','User Defined','Elbow Optimized');
+list = {'Elbow Optimized','Elbow w/ Min Clust Size','User Defined','Silhouette Batch'};
+[optimize,tf] = listdlg('PromptString','Choose a clustering method','ListString',list,'SelectionMode','single');
+%optimize = questdlg('Optimize Cluster Number?','Cluster Optimization','Elbow Optimized','Elbow w/ Min Clust Size','User Defined','Elbow Optimized');
 C = [];
-switch optimize
-    case 'Elbow Optimized'
-        opt_options = inputdlg({'Max Clusters','Replicates'},'Cluster Optimization',[1 50; 1 50],{'100','3'});
-        if isempty(opt_options); return; end
-        
-        %Cap the max clusters to the number of samples.
-        if size(data,1) < str2double(opt_options{1})
-            opt_options{1} = num2str(size(data,1));
-        end
-        [~,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
-        
-    case 'Elbow w/ Min Clust Size'
-        opt_options = inputdlg({'Max Clusters','Replicates','Min Clust Size'},'Cluster Optimization',[1 50; 1 50; 1 50],{'100','3','1'});
-        if isempty(opt_options); return; end
-        
-        %Cap the max clusters to the number of samples.
-        if size(data,1) < str2double(opt_options{1})
-            opt_options{1} = num2str(size(data,1));
-        end
-        [IDX,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
-        Celb = C;
-        [GC,~] = groupcounts(IDX);
-        numcl = length(GC);
-        while min(GC) < str2double(opt_options{3})
-            numcl = numcl - 1;
-            [IDX,C] = kmeans(data,numcl,'Distance','sqeuclidean','Replicates',str2double(opt_options{2}));
+if tf == 1
+    switch optimize
+        %case 'Elbow Optimized'
+        case 1
+            opt_options = inputdlg({'Max Clusters','Replicates'},'Cluster Optimization',[1 50; 1 50],{'100','3'});
+            if isempty(opt_options); return; end
+
+            %Cap the max clusters to the number of samples.
+            if size(data,1) < str2double(opt_options{1})
+                opt_options{1} = num2str(size(data,1));
+            end
+            [~,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
+
+        %case 'Elbow w/ Min Clust Size'
+        case 2
+            opt_options = inputdlg({'Max Clusters','Replicates','Min Clust Size'},'Cluster Optimization',[1 50; 1 50; 1 50],{'100','3','1'});
+            if isempty(opt_options); return; end
+
+            %Cap the max clusters to the number of samples.
+            if size(data,1) < str2double(opt_options{1})
+                opt_options{1} = num2str(size(data,1));
+            end
+            [IDX,C] = kmeans_opt(data, str2double(opt_options{1}), 0, str2double(opt_options{2}));
+            Celb = C;
             [GC,~] = groupcounts(IDX);
-        end
-        if numcl == 1
-            warning('Unable to find more than one cluster >= the min cluster size. Proceeding with basic elbow-optimized method.')
-            C = Celb;
-        end
-        
-    case 'User Defined'
-        opt_options = inputdlg({'# of Clusters','Replicates'},'Cluster with k-means',[1; 1],{'15','10'});
-        %k = inputdlg({'Choose number of k-means:'},'Cluster with k-means',1,{'15'});
-        if isempty(opt_options); return; end
-        k = str2double(opt_options{1});
-        nReps = str2double(opt_options{2});
-        [~, C] = kmeans(data,k,'Distance','sqeuclidean','Replicates',nReps);
+            numcl = length(GC);
+            while min(GC) < str2double(opt_options{3})
+                numcl = numcl - 1;
+                [IDX,C] = kmeans(data,numcl,'Distance','sqeuclidean','Replicates',str2double(opt_options{2}));
+                [GC,~] = groupcounts(IDX);
+            end
+            if numcl == 1
+                warning('Unable to find more than one cluster >= the min cluster size. Proceeding with basic elbow-optimized method.')
+                C = Celb;
+            end
+
+        %case 'User Defined'
+        case 3
+            opt_options = inputdlg({'# of Clusters','Replicates'},'Cluster with k-means',[1; 1],{'15','10'});
+            %k = inputdlg({'Choose number of k-means:'},'Cluster with k-means',1,{'15'});
+            if isempty(opt_options); return; end
+            k = str2double(opt_options{1});
+            nReps = str2double(opt_options{2});
+            [~, C] = kmeans(data,k,'Distance','sqeuclidean','Replicates',nReps);
+
+        %case 'Silhouette Batch'
+        case 4
+            %% User options
+            opt_options = inputdlg({'Min # of Clusters','Max # of Clusters','Replicates'},'Batch Options',[1; 1; 1],{'2','30','10'});
+
+            %% Silhouette loop
+            % Preallocate
+            minclust = str2double(opt_options{1});
+            maxclust = str2double(opt_options{2});
+            maxS = zeros(1,(maxclust-minclust+1));
+            %minS = zeros(1,(maxclust-minclust+1));
+            %meanS = zeros(1,(maxclust-minclust+1));
+            medianS = zeros(1,(maxclust-minclust+1));
+            below_zero = zeros(1,(maxclust-minclust+1));
+            meanAbv_zero = zeros(1,(maxclust-minclust+1));
+            greater8 = zeros(1,(maxclust-minclust+1));
+            greater0 = zeros(1,(maxclust-minclust+1));
+
+            for k = minclust:maxclust
+                clust = kmeans(data,k,'Distance','sqeuclidean','Replicates',str2double(opt_options{3}));
+                s = silhouette(data,clust);
+                ind = k-minclust+1;
+
+                % Making numeric vectors for line plots         
+                maxS(ind) = max(s);
+                %minS(ind) = min(s);
+                %meanS(ind) = mean(s);
+                medianS(ind) = median(s);
+
+                % Prop of k that fall below zero (total N that fall below zero/N)
+                below_zero(ind) = length(s(s<=0))/length(s);
+
+                % Mean silhouette value of those that are above zero.
+                meanAbv_zero(ind) = mean(s(s>0));
+
+                % Silhouette values > .8
+                greater8(ind) = length(s(s>0.8))/length(s);
+
+                % clusters with zero negative members
+                greater0(ind) = length(s(s>0))/length(s);
+            end
+
+            %% Silhouettes Plot
+            figure()
+            xvals = minclust:maxclust;
+            plot(xvals, greater8, 'Color', 'blue');
+            hold on;
+            plot(xvals, greater0, 'Color', 'red');
+            plot(xvals, maxS, 'Color', 'green');
+            plot(xvals, medianS, 'Color', 'black');
+            plot(xvals, below_zero, 'Color', 'cyan');
+            plot(xvals, meanAbv_zero, 'Color', 'magenta');
+            hold off;
+            title(sprintf('Silhouette Values for k = %d through %d Clusters',minclust,maxclust));
+            legend('Prop Greater 0.8', 'Prop Greater 0', 'Max S', 'Median S', 'Prop Silhouettes Values < Zero', 'Mean S Above Zero',...
+                'Location','southeast')%, 'Best Mean S', 'Best Min S')
+            legend('boxoff')
+            xlabel('Number of clusters (k)')
+            ylabel('Silhouette Value')
+    end
 end
 end
