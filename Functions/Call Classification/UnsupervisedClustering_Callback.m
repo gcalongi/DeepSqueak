@@ -109,53 +109,34 @@ while ~finished
             ClusteringData(:,'xFreq_Contour') = contourfreq;
             ClusteringData(:,'xTime_Contour') = contourtime;
             
-            % Save the cluster assignments
-            saveChoice =  questdlg('Save Extracted Contours with Cluster Assignments?','Save cluster assignments','Yes','No','No');
-            switch saveChoice
-                case 'Yes'
-                    CDBU = ClusteringData;
-                    ClusteringData{:,'ClustAssign'} = clustAssign;
-                    pind = regexp(char(ClusteringData{1,'Filename'}),'\');
-                    pind = pind(end);
-                    pname = char(ClusteringData{1,'Filename'});
-                    pname = pname(1:pind);
-                    [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save contours with cluster assignments');
-                    if FileName ~= 0
-                        save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
-                    end
-                    ClusteringData = CDBU;
-                    clear CDBU
-                case 'No'
-            end
-            
-            % Save PC?
-            saveChoice =  questdlg('Save Extracted Contours with Parsons Code?','Save PC','Yes','No','No');
-            switch saveChoice
-                case 'Yes'
-                    CDBU = ClusteringData;
-                    %ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
-                    ReshapedX   = cell2mat(ClusteringData.xFreq_Contour_Sl);
-                    slope       = diff(ReshapedX,1,2);
-                    MX          = (max(slope,[],'all')/(RES+1))*RES;
-                    pc          = round(slope.*(RES/MX));
-                    pc(pc>RES)  = RES;
-                    pc(pc<-RES) = -RES;
-                    ClusteringData{:,'Parsons'} = pc;
-                    pind = regexp(char(ClusteringData{1,'Filename'}),'\');
-                    pind = pind(end);
-                    pname = char(ClusteringData{1,'Filename'});
-                    pname = pname(1:pind);
-                    [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save contours with Parsons Code');
-                    if FileName ~= 0
-                        save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
-                    end
-                    ClusteringData = CDBU;
-                    clear CDBU
-                case 'No'
-            end
+%             % Save PC?
+%             saveChoice =  questdlg('Save Extracted Contours with Parsons Code?','Save PC','Yes','No','No');
+%             switch saveChoice
+%                 case 'Yes'
+%                     CDBU = ClusteringData;
+%                     %ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
+%                     ReshapedX   = cell2mat(ClusteringData.xFreq_Contour_Sl);
+%                     slope       = diff(ReshapedX,1,2);
+%                     MX          = (max(slope,[],'all')/(RES+1))*RES;
+%                     pc          = round(slope.*(RES/MX));
+%                     pc(pc>RES)  = RES;
+%                     pc(pc<-RES) = -RES;
+%                     ClusteringData{:,'Parsons'} = pc;
+%                     pind = regexp(char(ClusteringData{1,'Filename'}),'\');
+%                     pind = pind(end);
+%                     pname = char(ClusteringData{1,'Filename'});
+%                     pname = pname(1:pind);
+%                     [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save contours with Parsons Code');
+%                     if FileName ~= 0
+%                         save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
+%                     end
+%                     ClusteringData = CDBU;
+%                     clear CDBU
+%                 case 'No'
+%             end
                         
             %% Centroid contours
-            if relfreq_weight > 0 && sum([slope_weight, freq_weight, duration_weight, pc_weight]) == 0
+            if relfreq_weight > 0
                 % Generate relative frequencies
                 allrelfreq = ClusteringData.xFreq_Contour;
                 allrelfreq = cell2mat(allrelfreq);
@@ -181,9 +162,37 @@ while ~finished
                     nexttile
                     plot(1:num_pts,thiscent,1:num_pts,maxcont,'r--',1:num_pts,mincont,'r--')
                     ylim([minylim maxylim])
+                    title(i)
                 end
                 
                 title(montTile, 'Centroid Contours with Max and Min Call Variation')
+            end
+            
+            %% Silhouette Graph for This Run
+            figure()
+            [s,~] = silhouette(data,clustAssign);
+            xlim([-1 1])
+            yticklabels(1:size(C,1))
+            title(sprintf('Silhouettes of Clusters - %d Clusters',size(C,1)))
+            ClusteringData(:,'Silhouette') = num2cell(s);
+            
+            %% Save the cluster assignments & silhoutte values
+            saveChoice =  questdlg('Save Extracted Contours with Cluster Assignments?','Save cluster assignments','Yes','No','No');
+            switch saveChoice
+                case 'Yes'
+                    CDBU = ClusteringData;
+                    ClusteringData{:,'ClustAssign'} = clustAssign;
+                    pind = regexp(char(ClusteringData{1,'Filename'}),'\');
+                    pind = pind(end);
+                    pname = char(ClusteringData{1,'Filename'});
+                    pname = pname(1:pind);
+                    [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save contours with cluster assignments');
+                    if FileName ~= 0
+                        save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
+                    end
+                    ClusteringData = CDBU;
+                    clear CDBU
+                case 'No'
             end
             
             %% Sort the calls by how close they are to the cluster center
