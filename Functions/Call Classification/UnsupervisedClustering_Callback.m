@@ -25,8 +25,8 @@ while ~finished
                             [ClusteringData, ~, ~, ~, spectrogramOptions] = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
                             if isempty(ClusteringData); return; end
                             clusterParameters= inputdlg({'Number of Contour Pts','Shape weight','Concavity weight','Frequency weight', ...
-                                'Relative Frequency weight','Duration weight','Parsons Resolution','Parsons weight'}, ...%,'Parsons2 weight'},
-                                'Choose cluster parameters:',1,{'20','0','0','0','1','0','4','0'});%,'0'});
+                                'Relative Frequency weight','Duration weight','Parsons Resolution','Parsons weight','Infl Pt weight'}, ...%,'Parsons2 weight'},
+                                'Choose cluster parameters:',1,{'20','0','0','0','1','0','4','0','0'});%,'0'});
                             if isempty(clusterParameters); return; end
                             num_pts = str2double(clusterParameters{1});
                             slope_weight = str2double(clusterParameters{2});
@@ -36,9 +36,10 @@ while ~finished
                             duration_weight = str2double(clusterParameters{6});
                             RES = str2double(clusterParameters{7});
                             pc_weight = str2double(clusterParameters{8});
+                            ninflpt_weight = str2double(clusterParameters{9});
                             %pc2_weight = str2double(clusterParameters{8});
                             ClusteringData{:,'NumContPts'} = num_pts;
-                            data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight);%, pc2_weight);
+                            data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight, ninflpt_weight);%, pc2_weight);
                         case 'Variational Autoencoder'
                             [encoderNet, decoderNet, options, ClusteringData] = create_VAE_model(handles);
                             data = extract_VAE_embeddings(encoderNet, options, ClusteringData);
@@ -63,17 +64,18 @@ while ~finished
                             concav_weight = 0;
                             duration_weight = 0;
                             pc_weight = 0;
+                            ninflpt_weight = 0;
                             % Load existing model to replace variables as
                             % needed
                             load(fullfile(PathName,FileName),'C','num_pts',...
                                 'RES','freq_weight','relfreq_weight','slope_weight',...
-                                'concav_weight','duration_weight','pc_weight',...%'pc2_weight',...
+                                'concav_weight','duration_weight','pc_weight','ninflpt_weight',...%'pc2_weight',...
                                 'clusterName','spectrogramOptions');
                             ClusteringData = CreateClusteringData(handles, 'forClustering', true, 'spectrogramOptions', spectrogramOptions, 'save_data', true);
                             if isempty(ClusteringData); return; end
 
                             ClusteringData{:,'NumContPts'} = num_pts;
-                            data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight);%, pc2_weight);
+                            data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight, ninflpt_weight);%, pc2_weight);
                         case 'Variational Autoencoder'
                             C = [];
                             load(fullfile(PathName,FileName),'C','encoderNet','decoderNet','options');
@@ -99,15 +101,31 @@ while ~finished
 %             contourfreq = cellfun(@(x) {imresize(x',[1 num_pts])}, ClusteringData.xFreq,'UniformOutput',0);
 %             contourtime = cellfun(@(x) {imresize(x,[1 num_pts])}, ClusteringData.xTime,'UniformOutput',0);
             
-            contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+1)},ClusteringData.xTime,'UniformOutput',false);
+            
+            contourtimecc = cellfun(@(x) {linspace(min(x),max(x),num_pts+2)},ClusteringData.xTime,'UniformOutput',false);
+            contourfreqcc = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtimecc,'UniformOutput',false);
+            contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+2)},ClusteringData.xTime,'UniformOutput',false);
             contourfreqsl = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtimesl,'UniformOutput',false);
             contourtime = cellfun(@(x) {linspace(min(x),max(x),num_pts)},ClusteringData.xTime,'UniformOutput',false);
             contourfreq = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtime,'UniformOutput',false);
             
+            ClusteringData(:,'xFreq_Contour_CC') = contourfreqcc;
+            ClusteringData(:,'xTime_Contour_CC') = contourtimecc;
             ClusteringData(:,'xFreq_Contour_Sl') = contourfreqsl;
             ClusteringData(:,'xTime_Contour_Sl') = contourtimesl;
             ClusteringData(:,'xFreq_Contour') = contourfreq;
             ClusteringData(:,'xTime_Contour') = contourtime;
+            
+            contourfreqcc = cell2mat(cellfun(@(x) x{:}, contourfreqcc, 'UniformOutput',false));
+            concav = diff(contourfreqcc,2,2);
+            concav = zscore(concav,0,'all');
+            ninflpt = concav;
+            ninflpt(ninflpt<=-1) = -1;
+            ninflpt(ninflpt>=1) = 1;
+            ninflpt(ninflpt>-1 & ninflpt<1) = 0;
+            ninflpt = num2cell(ninflpt,2);
+            ninflpt = cell2mat(cellfun(@(x) length(find(diff(x(x~=0)))), ninflpt,'UniformOutput',false));
+            ClusteringData(:,'NumInflPts') = num2cell(ninflpt);
             
 %             % Save PC?
 %             saveChoice =  questdlg('Save Extracted Contours with Parsons Code?','Save PC','Yes','No','No');
@@ -347,7 +365,7 @@ if FromExisting(1) == 'N'
             if ~isnumeric(FileName)
                 save(fullfile(PathName, FileName), 'C', 'num_pts','RES','freq_weight',...
                     'relfreq_weight', 'slope_weight', 'concav_weight', 'duration_weight', 'pc_weight',... % 'pc2_weight',
-                    'clusterName', 'spectrogramOptions');
+                    'ninflpt_weight','clusterName', 'spectrogramOptions');
             end
         case 'ARTwarp'
             [FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder, 'Clustering Models', 'ARTwarp Model.mat'), 'Save clustering model');
@@ -385,7 +403,7 @@ for i = 1:size(ZJ,1)
 end
 end
 
-function data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight)%, pc2_weight)
+function data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight, ninflpt_weight)%, pc2_weight)
 % Parameterize the data for kmeans
 %ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
 % Linear interpolation
@@ -407,8 +425,19 @@ slope       = zscore(slope,0,'all');
 concav       = zscore(concav,0,'all');
 %freq        = cell2mat(cellfun(@(x) imresize(x',[1 num_pts]) ,ClusteringData.xFreq,'UniformOutput',0));
 timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts),ClusteringData.xTime,'UniformOutput',false);
-freq   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
-relfreq     = freq-freq(:,1);
+freq        = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
+%Recode relfreq to take out the first useless contour pt (that's always 0)
+%but keep num of contour pts at num_pts
+timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+1),ClusteringData.xTime,'UniformOutput',false);
+relfreq     = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
+relfreq     = relfreq(:,2:end)-relfreq(:,1);
+
+ninflpt = concav;
+ninflpt(ninflpt<=-1) = -1;
+ninflpt(ninflpt>=1) = 1;
+ninflpt(ninflpt>-1 & ninflpt<1) = 0;
+ninflpt = num2cell(ninflpt,2);
+ninflpt = cell2mat(cellfun(@(x) length(find(diff(x(x~=0)))), ninflpt,'UniformOutput',false));
 
 % MX2         = (max(relfreq,[],'all')/(RES+1))*RES;
 % pc2          = round(relfreq.*(RES/MX2));
@@ -421,6 +450,8 @@ duration    = repmat(ClusteringData.Duration,[1 num_pts]);
 duration    = zscore(duration,0,'all');
 pc          = zscore(pc,0,'all');
 % pc2       = zscore(pc2,0,'all');
+ninflpt    = repmat(ninflpt,[1 num_pts]);
+ninflpt     = zscore(ninflpt,0,'all');
 
 data = [
     freq        .*  freq_weight+.001,...
@@ -428,7 +459,8 @@ data = [
     slope       .*  slope_weight+.001,...
     concav      .*  concav_weight+.001,...
     duration    .*  duration_weight+.001,...
-    pc          .*  pc_weight+0.001...
+    pc          .*  pc_weight+0.001,...
+    ninflpt     .*  ninflpt_weight+0.001...
 %     pc2       .*  pc2_weight+0.001,...
     ];
 end
