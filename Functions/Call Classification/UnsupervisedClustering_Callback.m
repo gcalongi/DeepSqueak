@@ -116,42 +116,13 @@ while ~finished
             ClusteringData(:,'xFreq_Contour') = contourfreq;
             ClusteringData(:,'xTime_Contour') = contourtime;
             
-            contourfreqcc = cell2mat(cellfun(@(x) x{:}, contourfreqcc, 'UniformOutput',false));
-            concav = diff(contourfreqcc,2,2);
-            concav = zscore(concav,0,'all');
-            ninflpt = concav;
-            ninflpt(ninflpt<=-1) = -1;
-            ninflpt(ninflpt>=1) = 1;
-            ninflpt(ninflpt>-1 & ninflpt<1) = 0;
-            ninflpt = num2cell(ninflpt,2);
-            ninflpt = cell2mat(cellfun(@(x) length(find(diff(x(x~=0)))), ninflpt,'UniformOutput',false));
-            ClusteringData(:,'NumInflPts') = num2cell(ninflpt);
-            
-%             % Save PC?
-%             saveChoice =  questdlg('Save Extracted Contours with Parsons Code?','Save PC','Yes','No','No');
-%             switch saveChoice
-%                 case 'Yes'
-%                     CDBU = ClusteringData;
-%                     %ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
-%                     ReshapedX   = cell2mat(ClusteringData.xFreq_Contour_Sl);
-%                     slope       = diff(ReshapedX,1,2);
-%                     MX          = (max(slope,[],'all')/(RES+1))*RES;
-%                     pc          = round(slope.*(RES/MX));
-%                     pc(pc>RES)  = RES;
-%                     pc(pc<-RES) = -RES;
-%                     ClusteringData{:,'Parsons'} = pc;
-%                     pind = regexp(char(ClusteringData{1,'Filename'}),'\');
-%                     pind = pind(end);
-%                     pname = char(ClusteringData{1,'Filename'});
-%                     pname = pname(1:pind);
-%                     [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save contours with Parsons Code');
-%                     if FileName ~= 0
-%                         save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
-%                     end
-%                     ClusteringData = CDBU;
-%                     clear CDBU
-%                 case 'No'
-%             end
+            % Calculate and save # of inflection points based on full
+            % contours for each whistle
+            concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
+            % Normalize with entire dataset
+            [~,mu,sigma] = zscore(cell2mat(concavall));
+            ninflpt     = cellfun(@(x) get_infl_pts((diff(x,2)-mu)./sigma),ClusteringData.xFreq,'UniformOutput',false);
+            ClusteringData(:,'NumInflPts') = ninflpt;
                         
             %% Centroid contours
             if relfreq_weight > 0
@@ -414,6 +385,12 @@ slope       = diff(ReshapedX,1,2);
 timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+2),ClusteringData.xTime,'UniformOutput',false);
 ReshapedX   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
 concav      = diff(ReshapedX,2,2);
+% Pull concavity based on full contour
+concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
+% Normalize concavity over entire dataset
+[~,mu,sigma] = zscore(cell2mat(concavall));
+% Calculate # of inflection pts for each contour
+ninflpt     = cell2mat(cellfun(@(x) get_infl_pts((diff(x,2)-mu)./sigma),ClusteringData.xFreq,'UniformOutput',false));
 %MX          = quantile(slope,0.9,'all');
 %MX          = 2*std(slope,0,'all');
 %MX          = max(slope,[],'all');
@@ -431,13 +408,6 @@ freq        = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,Clus
 timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+1),ClusteringData.xTime,'UniformOutput',false);
 relfreq     = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
 relfreq     = relfreq(:,2:end)-relfreq(:,1);
-
-ninflpt = concav;
-ninflpt(ninflpt<=-1) = -1;
-ninflpt(ninflpt>=1) = 1;
-ninflpt(ninflpt>-1 & ninflpt<1) = 0;
-ninflpt = num2cell(ninflpt,2);
-ninflpt = cell2mat(cellfun(@(x) length(find(diff(x(x~=0)))), ninflpt,'UniformOutput',false));
 
 % MX2         = (max(relfreq,[],'all')/(RES+1))*RES;
 % pc2          = round(relfreq.*(RES/MX2));
@@ -463,6 +433,19 @@ data = [
     ninflpt     .*  ninflpt_weight+0.001...
 %     pc2       .*  pc2_weight+0.001,...
     ];
+end
+
+% # of Inflection Pt Calculations
+function ninflpt = get_infl_pts(cont_concav)
+    % Given a contour of concavity values
+    ninflpt = cont_concav;
+    % Separate concav values into three categories using +/- 1 SD as
+    % cut-offs
+    ninflpt(ninflpt<=-1) = -1;
+    ninflpt(ninflpt>=1) = 1;
+    ninflpt(ninflpt>-1 & ninflpt<1) = 0;
+    % Remove zeros and count changes between -1 and 1 and vice versa
+    ninflpt = length(find(diff(ninflpt(ninflpt~=0))));
 end
 
 function C = get_kmeans_centroids(data)
