@@ -104,7 +104,7 @@ while ~finished
             
             contourtimecc = cellfun(@(x) {linspace(min(x),max(x),num_pts+2)},ClusteringData.xTime,'UniformOutput',false);
             contourfreqcc = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtimecc,'UniformOutput',false);
-            contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+2)},ClusteringData.xTime,'UniformOutput',false);
+            contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+1)},ClusteringData.xTime,'UniformOutput',false);
             contourfreqsl = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtimesl,'UniformOutput',false);
             contourtime = cellfun(@(x) {linspace(min(x),max(x),num_pts)},ClusteringData.xTime,'UniformOutput',false);
             contourfreq = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtime,'UniformOutput',false);
@@ -127,9 +127,9 @@ while ~finished
             %% Centroid contours
             if relfreq_weight > 0
                 % Generate relative frequencies
-                allrelfreq = ClusteringData.xFreq_Contour;
+                allrelfreq = ClusteringData.xFreq_Contour_Sl;
                 allrelfreq = cell2mat(allrelfreq);
-                allrelfreq = allrelfreq-allrelfreq(:,1);
+                allrelfreq = allrelfreq(:,2:end)-allrelfreq(:,1);
                 allrelfreq = zscore(allrelfreq,0,'all');
                 
                 minylim = min(allrelfreq,[],'all');
@@ -516,8 +516,17 @@ if tf == 1
             meanAbv_zero = zeros(1,(maxclust-minclust+1));
             greater8 = zeros(1,(maxclust-minclust+1));
             greater0 = zeros(1,(maxclust-minclust+1));
-
+            
+            fig = uifigure;
+            d = uiprogressdlg(fig,'Title','Please Wait',...
+                'Message','Running silhouettes...');
+            drawnow
+            
             for k = minclust:maxclust
+                d.Value = k/(maxclust-minclust+1); 
+                d.Message = sprintf('Running silhouette %d of %d',k,maxclust-minclust+1);
+                drawnow
+    
                 clust = kmeans(data,k,'Distance','sqeuclidean','Replicates',str2double(opt_options{3}));
                 s = silhouette(data,clust);
                 ind = k-minclust+1;
@@ -540,6 +549,7 @@ if tf == 1
                 % clusters with zero negative members
                 greater0(ind) = length(s(s>0))/length(s);
             end
+            close(d)
 
             %% Silhouettes Plot
             figure()
