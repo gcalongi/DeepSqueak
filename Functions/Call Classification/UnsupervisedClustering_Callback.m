@@ -102,13 +102,15 @@ while ~finished
 %             contourtime = cellfun(@(x) {imresize(x,[1 num_pts])}, ClusteringData.xTime,'UniformOutput',0);
             
             
-            contourtimecc = cellfun(@(x) {linspace(min(x),max(x),num_pts+2)},ClusteringData.xTime,'UniformOutput',false);
-            contourfreqcc = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtimecc,'UniformOutput',false);
+            contoursmth = cellfun(@(x) smooth(x,5), ClusteringData.xFreq,'UniformOutput',false);
+            contourtimecc = cellfun(@(x) {linspace(min(x),max(x),num_pts+8)},ClusteringData.xTime,'UniformOutput',false);
+            contourfreqcc = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimecc,'UniformOutput',false);
             contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+1)},ClusteringData.xTime,'UniformOutput',false);
             contourfreqsl = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtimesl,'UniformOutput',false);
             contourtime = cellfun(@(x) {linspace(min(x),max(x),num_pts)},ClusteringData.xTime,'UniformOutput',false);
             contourfreq = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtime,'UniformOutput',false);
             
+            ClusteringData(:,'xFreq_Smooth') = contoursmth;
             ClusteringData(:,'xFreq_Contour_CC') = contourfreqcc;
             ClusteringData(:,'xTime_Contour_CC') = contourtimecc;
             ClusteringData(:,'xFreq_Contour_Sl') = contourfreqsl;
@@ -118,11 +120,32 @@ while ~finished
             
             % Calculate and save # of inflection points based on full
             % contours for each whistle
-            concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
-            % Normalize with entire dataset
+%             concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
+%             % Normalize with entire dataset
+%             [~,mu,sigma] = zscore(cell2mat(concavall));
+%             ninflpt     = cellfun(@(x) get_infl_pts((diff(x,2)-mu)./sigma),ClusteringData.xFreq,'UniformOutput',false);
+            %contourfreqcc   = cell2mat(cellfun(@(x) x{:}, contourfreqcc,'UniformOutput',false)); 
+            contourfreqcc   = cellfun(@(x) x{:}, contourfreqcc,'UniformOutput',false); 
+            %contourfreqcc   = cellfun(@(x) x{:}, contoursmth,'UniformOutput',false); 
+            % First deriv (deltax = 2 pts)
+            %concavall   = contourfreqcc(:,5:end)-contourfreqcc(:,1:end-4);
+            concavall   = cellfun(@(x) x(5:end)-x(1:end-4),contourfreqcc,'UniformOutput',false);
+            % Second deriv (deltax = 2 pts)
+            %concavall   = concavall(:,5:end)-concavall(:,1:end-4);
+            concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
+            % Second deriv (deltax = 2 pts)
+            % Normalize concavity over entire dataset
+            %zccall = num2cell(zscore(concavall,0,'all'),2);
             [~,mu,sigma] = zscore(cell2mat(concavall));
-            ninflpt     = cellfun(@(x) get_infl_pts((diff(x,2)-mu)./sigma),ClusteringData.xFreq,'UniformOutput',false);
+            % Calculate # of inflection pts for each contour
+            %ninflpt     = cellfun(@(x) get_infl_pts(x),zccall,'UniformOutput',false);
+            ninflpt     = cellfun(@(x) get_infl_pts((x-mu)./sigma),concavall,'UniformOutput',false);
             ClusteringData(:,'NumInflPts') = ninflpt;
+            
+
+% Normalize concavity over entire dataset
+%zccall = num2cell(zscore(concavall,0,'all'),2);
+% Calculate # of inflection pts for each contour
                         
             %% Centroid contours
             if relfreq_weight > 0
@@ -160,9 +183,28 @@ while ~finished
             %% Silhouette Graph for This Run
             figure()
             [s,~] = silhouette(data,clustAssign);
+            % Stats         
+            maxS = max(s);
+            %minS = min(s);
+            %meanS = mean(s);
+            medianS = median(s);
+
+            % Prop of k that fall below zero (total N that fall below zero/N)
+            below_zero = length(s(s<=0))/length(s);
+
+            % Mean silhouette value of those that are above zero.
+            meanAbv_zero = mean(s(s>0));
+
+            % Silhouette values > .8
+            greater8 = length(s(s>0.8))/length(s);
+
+            % clusters with zero negative members
+            greater0 = length(s(s>0))/length(s);
             xlim([-1 1])
             yticklabels(1:size(C,1))
-            title(sprintf('Silhouettes of Clusters - %d Clusters',size(C,1)))
+            title(sprintf('Silhouettes of Clusters - %d Clusters',size(C,1)),...
+                sprintf('Max = %0.2f  Med = %0.2f  Prop <= 0 = %0.2f  Mean > 0 = %0.2f  Prop > 0.8 = %0.2f', ...
+                maxS, medianS, below_zero, meanAbv_zero, greater8))
             ClusteringData(:,'Silhouette') = num2cell(s);
             
             %% Save the cluster assignments & silhoutte values
@@ -377,6 +419,8 @@ end
 function data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight, ninflpt_weight)%, pc2_weight)
 % Parameterize the data for kmeans
 %ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+1]) ,ClusteringData.xFreq,'UniformOutput',0));
+% Smooth contour
+allconts    = cellfun(@(x) smooth(x,5), ClusteringData.xFreq,'UniformOutput',false);
 % Linear interpolation
 timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+1),ClusteringData.xTime,'UniformOutput',false);
 ReshapedX   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
@@ -386,11 +430,22 @@ timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+2),ClusteringData.xTim
 ReshapedX   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
 concav      = diff(ReshapedX,2,2);
 % Pull concavity based on full contour
-concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
+%concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
+% Pull concavity based on 20-pt contour
+timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+8),ClusteringData.xTime,'UniformOutput',false);
+concavall   = cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,allconts,timelsp,'UniformOutput',false);
+% First deriv (deltax = 2 pts)
+%concavall   = concavall(:,5:end)-concavall(:,1:end-4);
+concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
+% Second deriv (deltax = 2 pts)
+%concavall   = concavall(:,5:end)-concavall(:,1:end-4);
+concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
 % Normalize concavity over entire dataset
-[~,mu,sigma] = zscore(cell2mat(concavall));
+[concav,mu,sigma] = zscore(cell2mat(concavall));
+%zccall = num2cell(zscore(concavall,0,'all'),2);
 % Calculate # of inflection pts for each contour
-ninflpt     = cell2mat(cellfun(@(x) get_infl_pts((diff(x,2)-mu)./sigma),ClusteringData.xFreq,'UniformOutput',false));
+ninflpt     = cell2mat(cellfun(@(x) get_infl_pts((x-mu)./sigma),concavall,'UniformOutput',false));
+%ninflpt     = cell2mat(cellfun(@(x) get_infl_pts(x),zccall,'UniformOutput',false));
 %MX          = quantile(slope,0.9,'all');
 %MX          = 2*std(slope,0,'all');
 %MX          = max(slope,[],'all');
@@ -523,8 +578,9 @@ if tf == 1
             drawnow
             
             for k = minclust:maxclust
-                d.Value = k/(maxclust-minclust+1); 
-                d.Message = sprintf('Running silhouette %d of %d',k,maxclust-minclust+1);
+                ind = k-minclust+1;
+                d.Value = ind/(maxclust-minclust+1); 
+                d.Message = sprintf('Running silhouette %d of %d',ind,maxclust-minclust+1);
                 drawnow
     
                 clust = kmeans(data,k,'Distance','sqeuclidean','Replicates',str2double(opt_options{3}));
@@ -550,6 +606,7 @@ if tf == 1
                 greater0(ind) = length(s(s>0))/length(s);
             end
             close(d)
+            delete(fig)
 
             %% Silhouettes Plot
             figure()
