@@ -106,10 +106,11 @@ while ~finished
             contourtimecc = cellfun(@(x) {linspace(min(x),max(x),num_pts+8)},ClusteringData.xTime,'UniformOutput',false);
             contourfreqcc = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimecc,'UniformOutput',false);
             contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+1)},ClusteringData.xTime,'UniformOutput',false);
-            contourfreqsl = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtimesl,'UniformOutput',false);
+            contourfreqsl = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimesl,'UniformOutput',false);
             contourtime = cellfun(@(x) {linspace(min(x),max(x),num_pts)},ClusteringData.xTime,'UniformOutput',false);
-            contourfreq = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,ClusteringData.xFreq,contourtime,'UniformOutput',false);
+            contourfreq = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtime,'UniformOutput',false);
             
+            %Now all based on contoursmth
             ClusteringData(:,'xFreq_Smooth') = contoursmth;
             ClusteringData(:,'xFreq_Contour_CC') = contourfreqcc;
             ClusteringData(:,'xTime_Contour_CC') = contourtimecc;
@@ -423,11 +424,11 @@ function data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, conc
 allconts    = cellfun(@(x) smooth(x,5), ClusteringData.xFreq,'UniformOutput',false);
 % Linear interpolation
 timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+1),ClusteringData.xTime,'UniformOutput',false);
-ReshapedX   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
+ReshapedX   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,allconts,timelsp,'UniformOutput',false));
 slope       = diff(ReshapedX,1,2);
 %ReshapedX   = cell2mat(cellfun(@(x) imresize(x',[1 num_pts+2]) ,ClusteringData.xFreq,'UniformOutput',0));
 timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+2),ClusteringData.xTime,'UniformOutput',false);
-ReshapedX   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
+ReshapedX   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,allconts,timelsp,'UniformOutput',false));
 concav      = diff(ReshapedX,2,2);
 % Pull concavity based on full contour
 %concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
@@ -457,11 +458,11 @@ slope       = zscore(slope,0,'all');
 concav       = zscore(concav,0,'all');
 %freq        = cell2mat(cellfun(@(x) imresize(x',[1 num_pts]) ,ClusteringData.xFreq,'UniformOutput',0));
 timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts),ClusteringData.xTime,'UniformOutput',false);
-freq        = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
+freq        = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,allconts,timelsp,'UniformOutput',false));
 %Recode relfreq to take out the first useless contour pt (that's always 0)
 %but keep num of contour pts at num_pts
 timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+1),ClusteringData.xTime,'UniformOutput',false);
-relfreq     = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,ClusteringData.xFreq,timelsp,'UniformOutput',false));
+relfreq     = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,allconts,timelsp,'UniformOutput',false));
 relfreq     = relfreq(:,2:end)-relfreq(:,1);
 
 % MX2         = (max(relfreq,[],'all')/(RES+1))*RES;
