@@ -137,10 +137,16 @@ while ~finished
             % Second deriv (deltax = 2 pts)
             % Normalize concavity over entire dataset
             %zccall = num2cell(zscore(concavall,0,'all'),2);
-            [~,mu,sigma] = zscore(cell2mat(concavall));
+            %[~,mu,sigma] = zscore(cell2mat(concavall),0,'all');
+            thresh_pos = cell2mat(concavall);
+            thresh_pos = thresh_pos(thresh_pos > 0);
+            thresh_pos = median(thresh_pos);
+            thresh_neg = cell2mat(concavall);
+            thresh_neg = thresh_neg(thresh_neg < 0);
+            thresh_neg = median(thresh_neg);
             % Calculate # of inflection pts for each contour
             %ninflpt     = cellfun(@(x) get_infl_pts(x),zccall,'UniformOutput',false);
-            ninflpt     = cellfun(@(x) get_infl_pts((x-mu)./sigma),concavall,'UniformOutput',false);
+            ninflpt     = cellfun(@(x) get_infl_pts(x,thresh_pos,thresh_neg),concavall,'UniformOutput',false);
             ClusteringData(:,'NumInflPts') = ninflpt;
             
 
@@ -204,7 +210,7 @@ while ~finished
             xlim([-1 1])
             yticklabels(1:size(C,1))
             title(sprintf('Silhouettes of Clusters - %d Clusters',size(C,1)),...
-                sprintf('Max = %0.2f  Med = %0.2f  Prop <= 0 = %0.2f  Mean > 0 = %0.2f  Prop > 0.8 = %0.2f', ...
+                sprintf('Max = %0.2f  Med = %0.2f  Prop<=0 = %0.2f  Mean>0 = %0.2f  Prop>0.8 = %0.2f', ...
                 maxS, medianS, below_zero, meanAbv_zero, greater8))
             ClusteringData(:,'Silhouette') = num2cell(s);
             
@@ -438,14 +444,23 @@ concavall   = cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,allconts,time
 % First deriv (deltax = 2 pts)
 %concavall   = concavall(:,5:end)-concavall(:,1:end-4);
 concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
+%Better (smoothed) slope
+slope = zscore(cell2mat(concavall),[],'all');
 % Second deriv (deltax = 2 pts)
 %concavall   = concavall(:,5:end)-concavall(:,1:end-4);
 concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
 % Normalize concavity over entire dataset
-[concav,mu,sigma] = zscore(cell2mat(concavall));
+%better (smoothed) concav
+concav = zscore(cell2mat(concavall),[],'all');
+thresh_pos = cell2mat(concavall);
+thresh_pos = thresh_pos(thresh_pos > 0);
+thresh_pos = median(thresh_pos);
+thresh_neg = cell2mat(concavall);
+thresh_neg = thresh_neg(thresh_neg < 0);
+thresh_neg = median(thresh_neg);
 %zccall = num2cell(zscore(concavall,0,'all'),2);
 % Calculate # of inflection pts for each contour
-ninflpt     = cell2mat(cellfun(@(x) get_infl_pts((x-mu)./sigma),concavall,'UniformOutput',false));
+ninflpt     = cell2mat(cellfun(@(x) get_infl_pts(x,thresh_pos,thresh_neg),concavall,'UniformOutput',false));
 %ninflpt     = cell2mat(cellfun(@(x) get_infl_pts(x),zccall,'UniformOutput',false));
 %MX          = quantile(slope,0.9,'all');
 %MX          = 2*std(slope,0,'all');
@@ -454,8 +469,8 @@ MX          = (max(slope,[],'all')/(RES+1))*RES;
 pc          = round(slope.*(RES/MX));
 pc(pc>RES)  = RES;
 pc(pc<-RES) = -RES;
-slope       = zscore(slope,0,'all');
-concav       = zscore(concav,0,'all');
+%slope       = zscore(slope,0,'all');
+%concav       = zscore(concav,0,'all');
 %freq        = cell2mat(cellfun(@(x) imresize(x',[1 num_pts]) ,ClusteringData.xFreq,'UniformOutput',0));
 timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts),ClusteringData.xTime,'UniformOutput',false);
 freq        = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,allconts,timelsp,'UniformOutput',false));
@@ -492,14 +507,14 @@ data = [
 end
 
 % # of Inflection Pt Calculations
-function ninflpt = get_infl_pts(cont_concav)
+function ninflpt = get_infl_pts(cont_concav,thresh_pos,thresh_neg)
     % Given a contour of concavity values
     ninflpt = cont_concav;
     % Separate concav values into three categories using +/- 1 SD as
     % cut-offs
-    ninflpt(ninflpt<=-1) = -1;
-    ninflpt(ninflpt>=1) = 1;
-    ninflpt(ninflpt>-1 & ninflpt<1) = 0;
+    ninflpt(ninflpt<=thresh_neg) = -1;
+    ninflpt(ninflpt>=thresh_pos) = 1;
+    ninflpt(ninflpt>thresh_neg & ninflpt<thresh_pos) = 0;
     % Remove zeros and count changes between -1 and 1 and vice versa
     ninflpt = length(find(diff(ninflpt(ninflpt~=0))));
 end
