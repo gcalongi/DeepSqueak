@@ -89,20 +89,11 @@ for currentfile = selections % Do this for each file
     accept = false(height(Calls),1);
     audioReader = squeakData([]);
     audioReader.audiodata = audiodata;
-    yRange = mean(Calls.Box(:,4));
-    xRange = mean(Calls.Box(:,3));
-    noverlap = .5;
-    optimalWindow = sqrt(xRange/(2000*yRange));
-    optimalWindow = optimalWindow + optimalWindow.*noverlap;
-    spectrogramOptions.windowsize = optimalWindow;
-    spectrogramOptions.overlap = optimalWindow .* noverlap;
-    spectrogramOptions.nfft = optimalWindow;
-    spectrogramOptions.frequency_padding = 0;
-    
+        
     for i = 1:height(Calls)
         waitbar(i ./ height(Calls), h, ['Processing file ' num2str(find(selections == currentfile)) ' of ' num2str(length(selections))]);
-
-        [I,wind,noverlap,nfft,rate,box,~,~,~,~,pow] = CreateFocusSpectrogram(Calls(i,:), handles, true, spectrogramOptions, audioReader);
+        
+        [I,wind,noverlap,nfft,rate,box,~,~,~,~,pow] = CreateFocusSpectrogram(Calls(i,:), handles, true, [], audioReader);
         stats = CalculateStats(I,wind,noverlap,nfft,rate,box,handles.data.settings.EntropyThreshold,handles.data.settings.AmplitudeThreshold);
 
         % For each rule, test the appropriate value, and accept or reject.
@@ -158,6 +149,7 @@ end
 close(h);
 
 %update the display
-if isfield(handles,'current_detection_file') && any(ismember(handles.detectionfilesnames(selections),handles.current_detection_file))
-    loadcalls_Callback(hObject, eventdata, handles, handles.current_file_id)
+update_folders(hObject, eventdata, handles);
+if isfield(handles,'current_detection_file')
+    loadcalls_Callback(hObject, eventdata, handles, true)
 end

@@ -6,8 +6,8 @@ function excel_Callback(hObject, eventdata, handles)
             waitbar(i/height(Calls),hc,waitbar_text);
 
             if includereject || Calls.Accept(i)
-
-                if Calls.Box(1) + Calls.Box(3) > audioReader.audiodata.Duration
+                
+                if Calls.Box(i,1) + Calls.Box(i,3) > audioReader.audiodata.Duration
                    warning('Call box start beyond audio duration. Skipping call %i in file %s',i,call_file); 
                    continue;
                 end
