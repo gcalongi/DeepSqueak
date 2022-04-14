@@ -942,7 +942,7 @@ end
 
 handles.data.audiodata = audioinfo(fullfile(handles.data.settings.audiofolder,handles.current_audio_file));
 
-Calls = table(zeros(0,8),[],[],[],[],[],[],[],[], 'VariableNames', {'Box', 'Score', 'Type', 'CallID', 'ClustCat','EntThresh', 'AmpThresh', 'Accept'});
+Calls = table(zeros(0,4),[],[],[],[],[],[],[], 'VariableNames', {'Box', 'Score', 'Type', 'CallID', 'ClustCat','EntThresh', 'AmpThresh', 'Accept'});
 % Calls.Box = [0 0 1 1];
 % Calls.Score = 0;
 % Calls.Type = categorical({'NA'});
