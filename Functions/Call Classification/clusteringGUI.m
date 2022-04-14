@@ -232,8 +232,10 @@ classdef clusteringGUI < handle
             % Resize the image while maintaining the aspect ratio by
             % padding with zeros
             im_size = size(ClusteringData.Spectrogram{clustIndex(callID)}) ;
-            new_size = floor(im_size .* min(obj.thumbnail_size ./ im_size));
-            im = double(imresize(ClusteringData.Spectrogram{clustIndex(callID)}, new_size));
+            %new_size = floor(im_size .* min(obj.thumbnail_size ./ im_size));
+            new_size = obj.thumbnail_size;
+            im = double(imresize(ClusteringData.Spectrogram{clustIndex(callID)}, obj.thumbnail_size));
+            %im = double(imresize(ClusteringData.Spectrogram{clustIndex(callID)}, new_size));
             pad = (obj.thumbnail_size - size(im)) / 2;
             im = padarray(im, floor(pad), 'pre');
             im = padarray(im, ceil(pad), 'post');
@@ -258,15 +260,15 @@ classdef clusteringGUI < handle
             
             if any(strcmp('NumContPts',ClusteringData.Properties.VariableNames))
                 %Overlay the contour used for the k-means clustering
-                resz = new_size/im_size;            
+                resz = new_size./im_size;            
                 %contourfreq = cell2mat(cellfun(@(x) imresize(x',[1 ClusteringData.NumContPts(clustIndex(callID))]) ,table2cell(obj.ClusteringData(clustIndex(callID),'xFreq')),'UniformOutput',0));
                 %contourtime = cell2mat(cellfun(@(x) imresize(x',[ClusteringData.NumContPts(clustIndex(callID)) 1]) ,table2cell(obj.ClusteringData(clustIndex(callID),'xTime')),'UniformOutput',0))';
                 
                 contourtime = cell2mat(obj.ClusteringData.xTime_Contour(clustIndex(callID)));
                 contourfreq = cell2mat(obj.ClusteringData.xFreq_Contour(clustIndex(callID)));
-                ploty = resz*contourfreq/ClusteringData.FreqScale(clustIndex(callID))+pad(1);
+                ploty = resz(1)*contourfreq/ClusteringData.FreqScale(clustIndex(callID))+pad(1);
                 ploty = size(colorIM,1)-ploty;
-                plotx = resz*contourtime/ClusteringData.TimeScale(clustIndex(callID))+pad(2);
+                plotx = resz(2)*contourtime/ClusteringData.TimeScale(clustIndex(callID))+pad(2);
                 
                 %Limit values for boundary/indexing issues
                 plotx(plotx<1) = 1;

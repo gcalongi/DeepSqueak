@@ -337,35 +337,36 @@ while ~finished
     clustAssign = clustAssign(idx);
     ClusteringData = ClusteringData(idx,:);
     
+    [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
     % Standardize clustering GUI image axes?
-    saveChoice =  questdlg('Standardize clustering GUI image axes?','Standardize axes','Yes','No','No');
-    switch saveChoice
-        case 'Yes'
-            CDBU = ClusteringData;
-            %ClusteringData{:,'StandSpec'} = ClusteringData{:,'Spectrogram'};
-            if length(unique(ClusteringData.TimeScale)) > 1
-                warning('%s\n%s\n%s',...
-                    'WARNING: It looks like the spectrograms in this collection were not run consistently.',...
-                    'This may be because you are loading multiple Extracted Contours that were run separately.',...
-                    'Recommend running the original detection mats instead or the Clustering GUI images may look weird.')
-                bProceed = questdlg('Do you wish to proceed anyway?','Yes','No','No');
-                if strcmp(bProceed,'No')
-                    error('You chose to stop.')
-                end
-            end
-            CDDurs = cell2mat(cellfun(@(x) size(x,2),ClusteringData.Spectrogram,'UniformOutput',false)).*ClusteringData.TimeScale;
-            %resz = max(cell2mat(cellfun(@size,ClusteringData.Spectrogram,'UniformOutput',false)));
-            pad = [zeros(size(CDDurs,1),1) max(CDDurs)-CDDurs];
-            pad = floor(pad./ClusteringData.TimeScale);
-            pad = num2cell(pad,2);
-            ClusteringData.Spectrogram = cellfun(@(x,y) padarray(x, y, 255, 'post'),ClusteringData.Spectrogram,pad,'UniformOutput',false);
-            [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
-            ClusteringData = CDBU;
-            clear CDBU CDDurs pad
-        case 'No'
-            [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);%, ...
-            %[str2double(handles.data.settings.detectionSettings{3}) str2double(handles.data.settings.detectionSettings{2})]);
-    end
+%     saveChoice =  questdlg('Standardize clustering GUI image axes?','Standardize axes','Yes','No','No');
+%     switch saveChoice
+%         case 'Yes'
+%             CDBU = ClusteringData;
+%             %ClusteringData{:,'StandSpec'} = ClusteringData{:,'Spectrogram'};
+%             if length(unique(ClusteringData.TimeScale)) > 1
+%                 warning('%s\n%s\n%s',...
+%                     'WARNING: It looks like the spectrograms in this collection were not run consistently.',...
+%                     'This may be because you are loading multiple Extracted Contours that were run separately.',...
+%                     'Recommend running the original detection mats instead or the Clustering GUI images may look weird.')
+%                 bProceed = questdlg('Do you wish to proceed anyway?','Yes','No','No');
+%                 if strcmp(bProceed,'No')
+%                     error('You chose to stop.')
+%                 end
+%             end
+%             CDDurs = cell2mat(cellfun(@(x) size(x,2),ClusteringData.Spectrogram,'UniformOutput',false)).*ClusteringData.TimeScale;
+%             %resz = max(cell2mat(cellfun(@size,ClusteringData.Spectrogram,'UniformOutput',false)));
+%             pad = [zeros(size(CDDurs,1),1) max(CDDurs)-CDDurs];
+%             pad = floor(pad./ClusteringData.TimeScale);
+%             pad = num2cell(pad,2);
+%             ClusteringData.Spectrogram = cellfun(@(x,y) padarray(x, y, 255, 'post'),ClusteringData.Spectrogram,pad,'UniformOutput',false);
+%             [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
+%             ClusteringData = CDBU;
+%             clear CDBU CDDurs pad
+%         case 'No'
+%             [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);%, ...
+%             %[str2double(handles.data.settings.detectionSettings{3}) str2double(handles.data.settings.detectionSettings{2})]);
+%     end
     
     %% Undo sort
     clustAssign(idx) = clustAssign;
