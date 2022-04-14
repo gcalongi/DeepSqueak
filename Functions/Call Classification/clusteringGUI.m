@@ -270,17 +270,25 @@ classdef clusteringGUI < handle
                 ploty = size(colorIM,1)-ploty;
                 plotx = resz(2)*contourtime/ClusteringData.TimeScale(clustIndex(callID))+pad(2);
                 
+                dotheight = 1;
+                dotlength = 5;
+                
+                if ClusteringData.IsJen(clustIndex(callID)) == 1
+                    dotheight = 2;
+                    dotlength = 1;
+                end
+                
                 %Limit values for boundary/indexing issues
                 plotx(plotx<1) = 1;
                 ploty(ploty<1) = 1;
-                plotx(plotx>(size(colorIM,2)-5)) = size(colorIM,2)-5;
-                ploty(ploty>(size(colorIM,1)-1)) = size(colorIM,1)-1;
+                plotx(plotx>(size(colorIM,2)-dotlength)) = size(colorIM,2)-dotlength;
+                ploty(ploty>(size(colorIM,1)-dotheight)) = size(colorIM,1)-dotheight;
 
                 for i = 1:length(ploty)
                     maxd1 = size(colorIM,1);
                     maxd2 = size(colorIM,2);
-                    maxd1 = min(maxd1,int16(ploty(i))+1);
-                    maxd2 = min(maxd2,int16(plotx(i))+5);
+                    maxd1 = min(maxd1,int16(ploty(i))+dotheight);
+                    maxd2 = min(maxd2,int16(plotx(i))+dotlength);
                     colorIM(int16(ploty(i)):maxd1,int16(plotx(i)):maxd2,:) = colorIM(int16(ploty(i)):maxd1,int16(plotx(i)):maxd2,:)+0.75;
                 end
             end

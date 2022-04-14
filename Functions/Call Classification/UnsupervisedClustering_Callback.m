@@ -337,6 +337,15 @@ while ~finished
     clustAssign = clustAssign(idx);
     ClusteringData = ClusteringData(idx,:);
     
+    %% Jen Res Settings
+    saveChoice =  questdlg('Are you Jen?','Ultrawide Resolution Quick Fix','Yes','No','No');
+    switch saveChoice
+        case 'Yes'
+            ClusteringData(:,'IsJen') = num2cell(ones(height(ClusteringData),1));
+        case 'No'
+            ClusteringData(:,'IsJen') = num2cell(zeros(height(ClusteringData),1));
+    end
+    
     [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
     % Standardize clustering GUI image axes?
 %     saveChoice =  questdlg('Standardize clustering GUI image axes?','Standardize axes','Yes','No','No');
