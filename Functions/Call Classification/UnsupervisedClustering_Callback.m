@@ -86,10 +86,14 @@ for j = 1:nruns
                         % Make a k-means model and return the centroids
                         if ~SuperBatch
                             C = get_kmeans_centroids(data);
+                            if isempty(C); return; end
                         else
-                            C = get_kmeans_centroids(data,batchtable(j,:));
+                            C = get_kmeans_centroids(data,batchtable(j,:),exportpath);
+                            if isempty(C)
+                                finished = 1;
+                                continue;
+                            end
                         end
-                        if isempty(C); return; end
 
                     case 'Yes'
                         [FileName,PathName] = uigetfile(fullfile(handles.data.squeakfolder,'Clustering Models','*.mat'));
@@ -447,6 +451,10 @@ for j = 1:nruns
         clustAssign(idx) = clustAssign;
         ClusteringData(idx,:) = ClusteringData;
     end
+    % Will only happen for batch batch silhouettes
+    if isempty(C)
+        continue;
+    end
     %% Update Files
     % Save the clustering model
     if FromExisting(1) == 'N'
@@ -614,8 +622,9 @@ function C = get_kmeans_centroids(data,varargin)
 if nargin == 1
     list = {'Elbow Optimized','Elbow w/ Min Clust Size','User Defined','Silhouette Batch'};
     [optimize,tf] = listdlg('PromptString','Choose a clustering method','ListString',list,'SelectionMode','single');
-elseif nargin == 2
+elseif nargin == 3
     batchtable = varargin{1};
+    exportpath = varargin{2};
     tf = 1;
     if strcmp(batchtable.runtype{:},'User Defined')
         optimize = 3;
@@ -758,8 +767,8 @@ if tf == 1
             xlabel('Number of clusters (k)')
             ylabel('Silhouette Value')
             
-            if nargin == 2
-                figfilename = sprintf('BatchSilhouette_%s_%dClusters.png',batchtable.modelname,k);
+            if nargin == 3
+                figfilename = sprintf('BatchSilhouette_%s_%dClusters.png',batchtable.modelname{:},k);
                 saveas(gcf, fullfile(exportpath,figfilename));
                 close(gcf);
             end
