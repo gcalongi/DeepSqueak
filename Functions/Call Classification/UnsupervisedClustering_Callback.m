@@ -1,418 +1,498 @@
 function UnsupervisedClustering_Callback(hObject, eventdata, handles)
 % Cluster with k-means or adaptive
 
-finished = 0; % Repeated until
-while ~finished
-    choice = questdlg('Choose clustering method:','Cluster','ARTwarp','K-means (recommended)', 'Variational Autoencoder','K-means (recommended)');
-    
-    % Get the data
-    %     [ClusteringData] = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
-    %     if isempty(ClusteringData); return; end
-    %     clustAssign = zeros(size(ClusteringData,1),1);
-    
-    
-    switch choice
-        case []
-            return
-            
-        case {'K-means (recommended)', 'Variational Autoencoder'}
-            FromExisting = questdlg('From existing model?','Cluster','Yes','No','No');
-            switch FromExisting % Load Model
-                case 'No'
-                    % Get parameter weights
-                    switch choice
-                        case 'K-means (recommended)'
-                            [ClusteringData, ~, ~, ~, spectrogramOptions] = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
-                            if isempty(ClusteringData); return; end
-                            clusterParameters= inputdlg({'Number of Contour Pts','Shape weight','Concavity weight','Frequency weight', ...
-                                'Relative Frequency weight','Duration weight','Parsons Resolution','Parsons weight','Infl Pt weight'}, ...%,'Parsons2 weight'},
-                                'Choose cluster parameters:',1,{'20','0','0','0','1','0','4','0','0'});%,'0'});
-                            if isempty(clusterParameters); return; end
-                            num_pts = str2double(clusterParameters{1});
-                            slope_weight = str2double(clusterParameters{2});
-                            concav_weight = str2double(clusterParameters{3});
-                            freq_weight = str2double(clusterParameters{4});
-                            relfreq_weight = str2double(clusterParameters{5});
-                            duration_weight = str2double(clusterParameters{6});
-                            RES = str2double(clusterParameters{7});
-                            pc_weight = str2double(clusterParameters{8});
-                            ninflpt_weight = str2double(clusterParameters{9});
-                            %pc2_weight = str2double(clusterParameters{8});
-                            ClusteringData{:,'NumContPts'} = num_pts;
-                            data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight, ninflpt_weight);%, pc2_weight);
-                        case 'Variational Autoencoder'
-                            [encoderNet, decoderNet, options, ClusteringData] = create_VAE_model(handles);
-                            data = extract_VAE_embeddings(encoderNet, options, ClusteringData);
-                    end
-                    
-                    % Make a k-means model and return the centroids
-                    C = get_kmeans_centroids(data);
-                    if isempty(C); return; end
-                    
-                case 'Yes'
-                    [FileName,PathName] = uigetfile(fullfile(handles.data.squeakfolder,'Clustering Models','*.mat'));
-                    if isnumeric(FileName); return;end
-                    switch choice
-                        case 'K-means (recommended)'
-                            spectrogramOptions = [];
-                            % Preset variables
-                            num_pts = 12;
-                            RES = 1;
-                            freq_weight = 0;
-                            relfreq_weight = 0;
-                            slope_weight = 0;
-                            concav_weight = 0;
-                            duration_weight = 0;
-                            pc_weight = 0;
-                            ninflpt_weight = 0;
-                            % Load existing model to replace variables as
-                            % needed
-                            load(fullfile(PathName,FileName),'C','num_pts',...
-                                'RES','freq_weight','relfreq_weight','slope_weight',...
-                                'concav_weight','duration_weight','pc_weight','ninflpt_weight',...%'pc2_weight',...
-                                'clusterName','spectrogramOptions');
-                            ClusteringData = CreateClusteringData(handles, 'forClustering', true, 'spectrogramOptions', spectrogramOptions, 'save_data', true);
-                            if isempty(ClusteringData); return; end
+SuperBatch = questdlg('Do you want to do a super batch run using a special mat?','Super Batch','Yes','No','No');
+bSuperBatch = false;
+nruns = 1;
+switch SuperBatch                         
+    case 'Yes'
+        % Load batch file
+        [batchfn, exportpath] = uigetfile('*.mat');
+        load(fullfile(exportpath,batchfn),'batchtable');
+        bSuperBatch = true;
+        nruns = height(batchtable);
+        
+        % Default questdlg options
+        choice = 'K-means (recommended)';
+        FromExisting = 'No';
+        saveChoice = 'No';
+        bJen = 'Yes';
+        bUpdate = 'No';
+        
+        % Load data for clustering
+        [ClusteringData, ~, ~, ~, spectrogramOptions] = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
+        if isempty(ClusteringData); return; end
+        BatchCDSt = ClusteringData;
+end
 
-                            ClusteringData{:,'NumContPts'} = num_pts;
-                            data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight, ninflpt_weight);%, pc2_weight);
-                        case 'Variational Autoencoder'
-                            C = [];
-                            load(fullfile(PathName,FileName),'C','encoderNet','decoderNet','options');
-                            [ClusteringData] = CreateClusteringData(handles, 'spectrogramOptions', options.spectrogram, 'scale_duration', options.maxDuration, 'freqRange', options.freqRange, 'save_data', true);
-                            if isempty(ClusteringData); return; end
-                            data = extract_VAE_embeddings(encoderNet, options, ClusteringData);
-                            
-                            % If the model was created through create_tsne_Callback, C won't exist, so make it.
-                            if isempty(C)
-                                C = get_kmeans_centroids(data);
-                            end
-                    end
-            end
-            
-            [clustAssign,D] = knnsearch(C,data,'Distance','euclidean');
-            
-            ClusteringData.DistToCen = D;
-            ClusteringData.ClustAssign = clustAssign;
-            
-            %% Save contour used in ClusteringData
-%             contourfreqsl = cellfun(@(x) {imresize(x',[1 num_pts+1])}, ClusteringData.xFreq,'UniformOutput',0);
-%             contourtimesl = cellfun(@(x) {imresize(x,[1 num_pts+1])}, ClusteringData.xTime,'UniformOutput',0);
-%             contourfreq = cellfun(@(x) {imresize(x',[1 num_pts])}, ClusteringData.xFreq,'UniformOutput',0);
-%             contourtime = cellfun(@(x) {imresize(x,[1 num_pts])}, ClusteringData.xTime,'UniformOutput',0);
-            
-            
-            contoursmth = cellfun(@(x) smooth(x,5), ClusteringData.xFreq,'UniformOutput',false);
-            contourtimecc = cellfun(@(x) {linspace(min(x),max(x),num_pts+8)},ClusteringData.xTime,'UniformOutput',false);
-            contourfreqcc = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimecc,'UniformOutput',false);
-            contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+1)},ClusteringData.xTime,'UniformOutput',false);
-            contourfreqsl = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimesl,'UniformOutput',false);
-            contourtime = cellfun(@(x) {linspace(min(x),max(x),num_pts)},ClusteringData.xTime,'UniformOutput',false);
-            contourfreq = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtime,'UniformOutput',false);
-            
-            %Now all based on contoursmth
-            ClusteringData(:,'xFreq_Smooth') = contoursmth;
-            ClusteringData(:,'xFreq_Contour_CC') = contourfreqcc;
-            ClusteringData(:,'xTime_Contour_CC') = contourtimecc;
-            ClusteringData(:,'xFreq_Contour_Sl') = contourfreqsl;
-            ClusteringData(:,'xTime_Contour_Sl') = contourtimesl;
-            ClusteringData(:,'xFreq_Contour') = contourfreq;
-            ClusteringData(:,'xTime_Contour') = contourtime;
-            
-            % Calculate and save # of inflection points based on full
-            % contours for each whistle
-%             concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
-%             % Normalize with entire dataset
-%             [~,mu,sigma] = zscore(cell2mat(concavall));
-%             ninflpt     = cellfun(@(x) get_infl_pts((diff(x,2)-mu)./sigma),ClusteringData.xFreq,'UniformOutput',false);
-            %contourfreqcc   = cell2mat(cellfun(@(x) x{:}, contourfreqcc,'UniformOutput',false)); 
-            contourfreqcc   = cellfun(@(x) x{:}, contourfreqcc,'UniformOutput',false); 
-            %contourfreqcc   = cellfun(@(x) x{:}, contoursmth,'UniformOutput',false); 
-            % First deriv (deltax = 2 pts)
-            %concavall   = contourfreqcc(:,5:end)-contourfreqcc(:,1:end-4);
-            concavall   = cellfun(@(x) x(5:end)-x(1:end-4),contourfreqcc,'UniformOutput',false);
-            % Second deriv (deltax = 2 pts)
-            %concavall   = concavall(:,5:end)-concavall(:,1:end-4);
-            concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
-            % Second deriv (deltax = 2 pts)
-            % Normalize concavity over entire dataset
-            %zccall = num2cell(zscore(concavall,0,'all'),2);
-            %[~,mu,sigma] = zscore(cell2mat(concavall),0,'all');
-            thresh_pos = cell2mat(concavall);
-            thresh_pos = thresh_pos(thresh_pos > 0);
-            thresh_pos = median(thresh_pos);
-            thresh_neg = cell2mat(concavall);
-            thresh_neg = thresh_neg(thresh_neg < 0);
-            thresh_neg = median(thresh_neg);
-            % Calculate # of inflection pts for each contour
-            %ninflpt     = cellfun(@(x) get_infl_pts(x),zccall,'UniformOutput',false);
-            ninflpt     = cellfun(@(x) get_infl_pts(x,thresh_pos,thresh_neg),concavall,'UniformOutput',false);
-            ClusteringData(:,'NumInflPts') = ninflpt;
-            
+for j = 1:nruns
+    %Reset Clustering Data if running batch
+    if SuperBatch
+        ClusteringData = BatchCDSt;
+    end
+    finished = 0; % Repeated until
+    while ~finished
+        if ~bSuperBatch
+            choice = questdlg('Choose clustering method:','Cluster','ARTwarp','K-means (recommended)', 'Variational Autoencoder','K-means (recommended)');
+        end
+        switch choice
+            case []
+                return
 
-% Normalize concavity over entire dataset
-%zccall = num2cell(zscore(concavall,0,'all'),2);
-% Calculate # of inflection pts for each contour
-                        
-            %% Centroid contours
-            if relfreq_weight > 0
-                % Generate relative frequencies
-                allrelfreq = ClusteringData.xFreq_Contour_Sl;
-                allrelfreq = cell2mat(allrelfreq);
-                allrelfreq = allrelfreq(:,2:end)-allrelfreq(:,1);
-                allrelfreq = zscore(allrelfreq,0,'all');
-                
-                minylim = min(allrelfreq,[],'all');
-                maxylim = max(allrelfreq,[],'all');
-                
-                % Make the figure
-                figure('Color','w','Position',[50,50,800,800]);
-                montTile = tiledlayout('flow','TileSpacing','none');
-                
-                for i = unique(clustAssign)'
-                    thisclust = allrelfreq(ClusteringData.ClustAssign == i,:);
-                    thiscent = C(i,num_pts+1:2*num_pts);
-                    % Undo normalization for scaling
-                    thiscent = (thiscent-0.001)./relfreq_weight;
-                
-                    maxcont = max(thisclust,[],1);
-                    mincont = min(thisclust,[],1);
-                    
-                    nexttile
-                    plot(1:num_pts,thiscent,1:num_pts,maxcont,'r--',1:num_pts,mincont,'r--')
-                    ylim([minylim maxylim])
-                    title(sprintf('(%d)  n = %d',i,size(thisclust,1)))
+            case {'K-means (recommended)', 'Variational Autoencoder'}
+                if ~bSuperBatch
+                    FromExisting = questdlg('From existing model?','Cluster','Yes','No','No');
+                end
+                switch FromExisting % Load Model
+                    case 'No'
+                        % Get parameter weights
+                        switch choice
+                            case 'K-means (recommended)'
+                                if ~SuperBatch
+                                    [ClusteringData, ~, ~, ~, spectrogramOptions] = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
+                                    if isempty(ClusteringData); return; end
+                                    clusterParameters= inputdlg({'Number of Contour Pts','Shape weight','Concavity weight','Frequency weight', ...
+                                        'Relative Frequency weight','Duration weight','Parsons Resolution','Parsons weight','Infl Pt weight'}, ...%,'Parsons2 weight'},
+                                        'Choose cluster parameters:',1,{'20','0','0','0','1','0','4','0','0'});%,'0'});
+                                    if isempty(clusterParameters); return; end
+                                    num_pts = str2double(clusterParameters{1});
+                                    slope_weight = str2double(clusterParameters{2});
+                                    concav_weight = str2double(clusterParameters{3});
+                                    freq_weight = str2double(clusterParameters{4});
+                                    relfreq_weight = str2double(clusterParameters{5});
+                                    duration_weight = str2double(clusterParameters{6});
+                                    RES = str2double(clusterParameters{7});
+                                    pc_weight = str2double(clusterParameters{8});
+                                    ninflpt_weight = str2double(clusterParameters{9});
+                                    %pc2_weight = str2double(clusterParameters{8});
+                                else
+                                    num_pts = 20;
+                                    slope_weight = batchtable.slope_weight(j);
+                                    concav_weight = batchtable.concav_weight(j);
+                                    freq_weight = 0;
+                                    relfreq_weight = batchtable.relfreq_weight(j);
+                                    duration_weight = 0;
+                                    RES = 4;
+                                    pc_weight = batchtable.pc_weight(j);
+                                    ninflpt_weight = batchtable.ninflpt_weight(j);
+                                end
+                                ClusteringData{:,'NumContPts'} = num_pts;
+                                data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight, ninflpt_weight);%, pc2_weight);
+                            case 'Variational Autoencoder'
+                                [encoderNet, decoderNet, options, ClusteringData] = create_VAE_model(handles);
+                                data = extract_VAE_embeddings(encoderNet, options, ClusteringData);
+                        end
+
+                        % Make a k-means model and return the centroids
+                        if ~SuperBatch
+                            C = get_kmeans_centroids(data);
+                        else
+                            C = get_kmeans_centroids(data,batchtable(j,:));
+                        end
+                        if isempty(C); return; end
+
+                    case 'Yes'
+                        [FileName,PathName] = uigetfile(fullfile(handles.data.squeakfolder,'Clustering Models','*.mat'));
+                        if isnumeric(FileName); return;end
+                        switch choice
+                            case 'K-means (recommended)'
+                                spectrogramOptions = [];
+                                % Preset variables
+                                num_pts = 12;
+                                RES = 1;
+                                freq_weight = 0;
+                                relfreq_weight = 0;
+                                slope_weight = 0;
+                                concav_weight = 0;
+                                duration_weight = 0;
+                                pc_weight = 0;
+                                ninflpt_weight = 0;
+                                % Load existing model to replace variables as
+                                % needed
+                                load(fullfile(PathName,FileName),'C','num_pts',...
+                                    'RES','freq_weight','relfreq_weight','slope_weight',...
+                                    'concav_weight','duration_weight','pc_weight','ninflpt_weight',...%'pc2_weight',...
+                                    'clusterName','spectrogramOptions');
+                                ClusteringData = CreateClusteringData(handles, 'forClustering', true, 'spectrogramOptions', spectrogramOptions, 'save_data', true);
+                                if isempty(ClusteringData); return; end
+
+                                ClusteringData{:,'NumContPts'} = num_pts;
+                                data = get_kmeans_data(ClusteringData, num_pts, RES, slope_weight, concav_weight, freq_weight, relfreq_weight, duration_weight, pc_weight, ninflpt_weight);%, pc2_weight);
+                            case 'Variational Autoencoder'
+                                C = [];
+                                load(fullfile(PathName,FileName),'C','encoderNet','decoderNet','options');
+                                [ClusteringData] = CreateClusteringData(handles, 'spectrogramOptions', options.spectrogram, 'scale_duration', options.maxDuration, 'freqRange', options.freqRange, 'save_data', true);
+                                if isempty(ClusteringData); return; end
+                                data = extract_VAE_embeddings(encoderNet, options, ClusteringData);
+
+                                % If the model was created through create_tsne_Callback, C won't exist, so make it.
+                                if isempty(C)
+                                    C = get_kmeans_centroids(data);
+                                end
+                        end
+                end
+
+                [clustAssign,D] = knnsearch(C,data,'Distance','euclidean');
+
+                ClusteringData.DistToCen = D;
+                ClusteringData.ClustAssign = clustAssign;
+
+                %% Save contour used in ClusteringData
+    %             contourfreqsl = cellfun(@(x) {imresize(x',[1 num_pts+1])}, ClusteringData.xFreq,'UniformOutput',0);
+    %             contourtimesl = cellfun(@(x) {imresize(x,[1 num_pts+1])}, ClusteringData.xTime,'UniformOutput',0);
+    %             contourfreq = cellfun(@(x) {imresize(x',[1 num_pts])}, ClusteringData.xFreq,'UniformOutput',0);
+    %             contourtime = cellfun(@(x) {imresize(x,[1 num_pts])}, ClusteringData.xTime,'UniformOutput',0);
+
+                contoursmth = cellfun(@(x) smooth(x,5), ClusteringData.xFreq,'UniformOutput',false);
+                contourtimecc = cellfun(@(x) {linspace(min(x),max(x),num_pts+8)},ClusteringData.xTime,'UniformOutput',false);
+                contourfreqcc = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimecc,'UniformOutput',false);
+                contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+1)},ClusteringData.xTime,'UniformOutput',false);
+                contourfreqsl = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimesl,'UniformOutput',false);
+                contourtime = cellfun(@(x) {linspace(min(x),max(x),num_pts)},ClusteringData.xTime,'UniformOutput',false);
+                contourfreq = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtime,'UniformOutput',false);
+
+                %Now all based on contoursmth
+                ClusteringData(:,'xFreq_Smooth') = contoursmth;
+                ClusteringData(:,'xFreq_Contour_CC') = contourfreqcc;
+                ClusteringData(:,'xTime_Contour_CC') = contourtimecc;
+                ClusteringData(:,'xFreq_Contour_Sl') = contourfreqsl;
+                ClusteringData(:,'xTime_Contour_Sl') = contourtimesl;
+                ClusteringData(:,'xFreq_Contour') = contourfreq;
+                ClusteringData(:,'xTime_Contour') = contourtime;
+
+                % Calculate and save # of inflection points based on full
+                % contours for each whistle
+    %             concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
+    %             % Normalize with entire dataset
+    %             [~,mu,sigma] = zscore(cell2mat(concavall));
+    %             ninflpt     = cellfun(@(x) get_infl_pts((diff(x,2)-mu)./sigma),ClusteringData.xFreq,'UniformOutput',false);
+                %contourfreqcc   = cell2mat(cellfun(@(x) x{:}, contourfreqcc,'UniformOutput',false)); 
+                contourfreqcc   = cellfun(@(x) x{:}, contourfreqcc,'UniformOutput',false); 
+                %contourfreqcc   = cellfun(@(x) x{:}, contoursmth,'UniformOutput',false); 
+                % First deriv (deltax = 2 pts)
+                %concavall   = contourfreqcc(:,5:end)-contourfreqcc(:,1:end-4);
+                concavall   = cellfun(@(x) x(5:end)-x(1:end-4),contourfreqcc,'UniformOutput',false);
+                % Second deriv (deltax = 2 pts)
+                %concavall   = concavall(:,5:end)-concavall(:,1:end-4);
+                concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
+                % Second deriv (deltax = 2 pts)
+                % Normalize concavity over entire dataset
+                %zccall = num2cell(zscore(concavall,0,'all'),2);
+                %[~,mu,sigma] = zscore(cell2mat(concavall),0,'all');
+                thresh_pos = cell2mat(concavall);
+                thresh_pos = thresh_pos(thresh_pos > 0);
+                thresh_pos = median(thresh_pos);
+                thresh_neg = cell2mat(concavall);
+                thresh_neg = thresh_neg(thresh_neg < 0);
+                thresh_neg = median(thresh_neg);
+                % Calculate # of inflection pts for each contour
+                %ninflpt     = cellfun(@(x) get_infl_pts(x),zccall,'UniformOutput',false);
+                ninflpt     = cellfun(@(x) get_infl_pts(x,thresh_pos,thresh_neg),concavall,'UniformOutput',false);
+                ClusteringData(:,'NumInflPts') = ninflpt;
+
+
+    % Normalize concavity over entire dataset
+    %zccall = num2cell(zscore(concavall,0,'all'),2);
+    % Calculate # of inflection pts for each contour
+
+                %% Centroid contours
+                if relfreq_weight > 0
+                    % Generate relative frequencies
+                    allrelfreq = ClusteringData.xFreq_Contour_Sl;
+                    allrelfreq = cell2mat(allrelfreq);
+                    allrelfreq = allrelfreq(:,2:end)-allrelfreq(:,1);
+                    allrelfreq = zscore(allrelfreq,0,'all');
+
+                    minylim = min(allrelfreq,[],'all');
+                    maxylim = max(allrelfreq,[],'all');
+
+                    % Make the figure
+                    figure('Color','w','Position',[50,50,800,800]);
+                    montTile = tiledlayout('flow','TileSpacing','none');
+
+                    for i = unique(clustAssign)'
+                        thisclust = allrelfreq(ClusteringData.ClustAssign == i,:);
+                        thiscent = C(i,num_pts+1:2*num_pts);
+                        % Undo normalization for scaling
+                        thiscent = (thiscent-0.001)./relfreq_weight;
+
+                        maxcont = max(thisclust,[],1);
+                        mincont = min(thisclust,[],1);
+
+                        nexttile
+                        plot(1:num_pts,thiscent,1:num_pts,maxcont,'r--',1:num_pts,mincont,'r--')
+                        ylim([minylim maxylim])
+                        title(sprintf('(%d)  n = %d',i,size(thisclust,1)))
+                    end
+
+                    title(montTile, 'Centroid Contours with Max and Min Call Variation')
+                end
+                if SuperBatch
+                    figfilename = sprintf('CentroidContours_%s_%dClusters.png',batchtable.modelname{j},size(C,1));
+                    saveas(gcf, fullfile(exportpath,figfilename));
+                    close(gcf);
+                end
+
+                %% Silhouette Graph for This Run
+                figure()
+                [s,~] = silhouette(data,clustAssign);
+                % Stats         
+                maxS = max(s);
+                %minS = min(s);
+                meanS = mean(s);
+                medianS = median(s);
+
+                % Prop of k that fall below zero (total N that fall below zero/N)
+                below_zero = length(s(s<=0))/length(s);
+
+                % Mean silhouette value of those that are above zero.
+                meanAbv_zero = mean(s(s>0));
+
+                % Silhouette values > .8
+                greater8 = length(s(s>0.8))/length(s);
+
+                % clusters with zero negative members
+                greater0 = length(s(s>0))/length(s);
+                xlim([-1 1])
+                yticklabels(1:size(C,1))
+                title(sprintf('Silhouettes of Clusters - %d Clusters',size(C,1)),...
+                    sprintf('Mean = %0.2f  Med = %0.2f  Max = %0.2f  Prop<=0 = %0.2f  Mean>0 = %0.2f  Prop>0.8 = %0.2f', ...
+                    meanS, medianS, maxS, below_zero, meanAbv_zero, greater8))
+                if SuperBatch
+                    figfilename = sprintf('SingleSilhouette_%s_%dClusters.png',batchtable.modelname{j},size(C,1));
+                    saveas(gcf, fullfile(exportpath,figfilename));
+                    close(gcf);
                 end
                 
-                title(montTile, 'Centroid Contours with Max and Min Call Variation')
-            end
-            
-            %% Silhouette Graph for This Run
-            figure()
-            [s,~] = silhouette(data,clustAssign);
-            % Stats         
-            maxS = max(s);
-            %minS = min(s);
-            %meanS = mean(s);
-            medianS = median(s);
+                ClusteringData(:,'Silhouette') = num2cell(s);
 
-            % Prop of k that fall below zero (total N that fall below zero/N)
-            below_zero = length(s(s<=0))/length(s);
+                %% Save the cluster assignments & silhoutte values
+                if ~SuperBatch
+                    saveChoice =  questdlg('Save Extracted Contours with Cluster Assignments?','Save cluster assignments','Yes','No','No');
+                end
+                switch saveChoice
+                    case 'Yes'
+                        CDBU = ClusteringData;
+                        ClusteringData{:,'ClustAssign'} = clustAssign;
+                        pind = regexp(char(ClusteringData{1,'Filename'}),'\');
+                        pind = pind(end);
+                        pname = char(ClusteringData{1,'Filename'});
+                        pname = pname(1:pind);
+                        [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save contours with cluster assignments');
+                        if FileName ~= 0
+                            save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
+                        end
+                        ClusteringData = CDBU;
+                        clear CDBU
+                    case 'No'
+                end
 
-            % Mean silhouette value of those that are above zero.
-            meanAbv_zero = mean(s(s>0));
+                %% Sort the calls by how close they are to the cluster center
+                [~,idx] = sort(D);
+                clustAssign = clustAssign(idx);
+                ClusteringData = ClusteringData(idx,:);
 
-            % Silhouette values > .8
-            greater8 = length(s(s>0.8))/length(s);
+                %% Make a montage with the top calls in each class
+                try
+                    % Find the median call length
+                    [~, i] = unique(clustAssign,'sorted');
+                    maxlength = cellfun(@(spect) size(spect,2), ClusteringData.Spectrogram(i));
+                    maxlength = round(prctile(maxlength,75));
+                    maxBandwidth = cellfun(@(spect) size(spect,1), ClusteringData.Spectrogram(i));
+                    maxBandwidth = round(prctile(maxBandwidth,75));
 
-            % clusters with zero negative members
-            greater0 = length(s(s>0))/length(s);
-            xlim([-1 1])
-            yticklabels(1:size(C,1))
-            title(sprintf('Silhouettes of Clusters - %d Clusters',size(C,1)),...
-                sprintf('Max = %0.2f  Med = %0.2f  Prop<=0 = %0.2f  Mean>0 = %0.2f  Prop>0.8 = %0.2f', ...
-                maxS, medianS, below_zero, meanAbv_zero, greater8))
-            ClusteringData(:,'Silhouette') = num2cell(s);
-            
-            %% Save the cluster assignments & silhoutte values
-            saveChoice =  questdlg('Save Extracted Contours with Cluster Assignments?','Save cluster assignments','Yes','No','No');
-            switch saveChoice
-                case 'Yes'
-                    CDBU = ClusteringData;
-                    ClusteringData{:,'ClustAssign'} = clustAssign;
+                    % Make the figure
+                    figure('Color','w','Position',[50,50,800,800]);
+    %                 ax_montage = axes(f_montage);
+                    % Make the image stack
+                    %montageI = [];
+                    montTile = tiledlayout('flow','TileSpacing','none');
+                    for i = unique(clustAssign)'
+                        index = find(clustAssign==i,1);
+                        tmp = ClusteringData.Spectrogram{index,1};
+                        tmp = padarray(tmp,[0,max(maxlength-size(tmp,2),0)],'both');
+                        tmp = rescale(tmp,1,256);
+                        %montageI(:,:,i) = floor(imresize(tmp,[maxBandwidth,maxlength]));
+
+                        nexttile
+                        image(imtile(floor(imresize(tmp,[maxBandwidth,maxlength])), inferno, 'BackgroundColor', 'w', 'GridSize',[1 1]))
+                        title(num2str(i))
+                        axis off
+                    end
+    %                 image(ax_montage, imtile(montageI, inferno, 'BackgroundColor', 'w', 'BorderSize', 2, 'GridSize',[5 NaN]))
+    %                 axis(ax_montage, 'off')
+                    title(montTile, 'Closest call to each cluster center')
+                catch
+                    disp('For some reason, I couldn''t make a montage of the call exemplars')
+                end
+                
+                if SuperBatch
+                    figfilename = sprintf('ClosestCall_%s_%dClusters.png',batchtable.modelname{j},size(C,1));
+                    saveas(gcf, fullfile(exportpath,figfilename));
+                    close(gcf);
+                end
+
+                %% Undo sort
+                clustAssign(idx) = clustAssign;
+                ClusteringData(idx,:) = ClusteringData;
+
+            case 'ARTwarp'
+                ClusteringData = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
+                if isempty(ClusteringData); return; end
+                FromExisting = questdlg('From existing model?','Cluster','Yes','No','No');
+                switch FromExisting% Load Art Model
+                    case 'No'
+                        %% Get settings
+                        prompt = {'Matching Threshold:','Duplicate Category Merge Threshold:','Outlier Threshold','Learning Rate:','Interations:','Shape Importance','Frequency Importance','Duration Importance'};
+                        dlg_title = 'ARTwarp';
+                        num_lines = [1 50];
+                        defaultans = {'5','2.5','8','0.001','5','4','1','1'};
+                        settings = inputdlg(prompt,dlg_title,num_lines,defaultans);
+                        if isempty(settings)
+                            return
+                        end
+                        %% Cluster
+                        try
+                            [ARTnet, clustAssign] = ARTwarp2(ClusteringData.xFreq,settings);
+                        catch ME
+                            disp(ME)
+                        end
+
+                    case 'Yes'
+                        [FileName,PathName] = uigetfile(fullfile(handles.data.squeakfolder,'Clustering Models','*.mat'));
+                        load(fullfile(PathName,FileName),'ARTnet','settings');
+                        if exist('ARTnet', 'var') ~= 1
+                            warndlg('ARTnet model could not be found. Is this file a trained ARTwarp2 model?')
+                            continue
+                        end
+
+                end
+                [clustAssign] = GetARTwarpClusters(ClusteringData.xFreq,ARTnet,settings);
+        end
+
+        %     data = freq;
+        %         epsilon = 0.0001;
+        % mu = mean(data);
+        % data = data - mean(data)
+        % A = data'*data;
+        % [V,D,~] = svd(A);
+        % whMat = sqrt(size(data,1)-1)*V*sqrtm(inv(D + eye(size(D))*epsilon))*V';
+        % Xwh = data*whMat;
+        % invMat = pinv(whMat);
+        %
+        % data = Xwh
+        %
+        % data  = (freq-mean(freq)) ./ std(freq)
+        % [clustAssign, C]= kmeans(data,10,'Distance','sqeuclidean','Replicates',10);
+
+
+        %% Assign Names
+        % If the
+        if strcmp(choice, 'K-means (recommended)') && strcmp(FromExisting, 'Yes')
+            clustAssign = categorical(clustAssign, 1:size(C,1), cellstr(clusterName));
+        end
+
+        %% Sort the calls by how close they are to the cluster center
+        [~,idx] = sort(ClusteringData.DistToCen);
+        clustAssign = clustAssign(idx);
+        ClusteringData = ClusteringData(idx,:);
+
+        %% Jen Res Settings
+        if ~SuperBatch
+            bJen =  questdlg('Are you Jen?','Ultrawide Resolution Quick Fix','Yes','No','No');
+        end
+        switch bJen
+            case 'Yes'
+                ClusteringData(:,'IsJen') = num2cell(ones(height(ClusteringData),1));
+            case 'No'
+                ClusteringData(:,'IsJen') = num2cell(zeros(height(ClusteringData),1));
+        end
+
+        if ~SuperBatch
+            [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
+        else
+            finished = 1;
+        end
+        % Standardize clustering GUI image axes?
+    %     saveChoice =  questdlg('Standardize clustering GUI image axes?','Standardize axes','Yes','No','No');
+    %     switch saveChoice
+    %         case 'Yes'
+    %             CDBU = ClusteringData;
+    %             %ClusteringData{:,'StandSpec'} = ClusteringData{:,'Spectrogram'};
+    %             if length(unique(ClusteringData.TimeScale)) > 1
+    %                 warning('%s\n%s\n%s',...
+    %                     'WARNING: It looks like the spectrograms in this collection were not run consistently.',...
+    %                     'This may be because you are loading multiple Extracted Contours that were run separately.',...
+    %                     'Recommend running the original detection mats instead or the Clustering GUI images may look weird.')
+    %                 bProceed = questdlg('Do you wish to proceed anyway?','Yes','No','No');
+    %                 if strcmp(bProceed,'No')
+    %                     error('You chose to stop.')
+    %                 end
+    %             end
+    %             CDDurs = cell2mat(cellfun(@(x) size(x,2),ClusteringData.Spectrogram,'UniformOutput',false)).*ClusteringData.TimeScale;
+    %             %resz = max(cell2mat(cellfun(@size,ClusteringData.Spectrogram,'UniformOutput',false)));
+    %             pad = [zeros(size(CDDurs,1),1) max(CDDurs)-CDDurs];
+    %             pad = floor(pad./ClusteringData.TimeScale);
+    %             pad = num2cell(pad,2);
+    %             ClusteringData.Spectrogram = cellfun(@(x,y) padarray(x, y, 255, 'post'),ClusteringData.Spectrogram,pad,'UniformOutput',false);
+    %             [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
+    %             ClusteringData = CDBU;
+    %             clear CDBU CDDurs pad
+    %         case 'No'
+    %             [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);%, ...
+    %             %[str2double(handles.data.settings.detectionSettings{3}) str2double(handles.data.settings.detectionSettings{2})]);
+    %     end
+
+        %% Undo sort
+        clustAssign(idx) = clustAssign;
+        ClusteringData(idx,:) = ClusteringData;
+    end
+    %% Update Files
+    % Save the clustering model
+    if FromExisting(1) == 'N'
+        switch choice
+            case 'K-means (recommended)'
+                if ~SuperBatch
                     pind = regexp(char(ClusteringData{1,'Filename'}),'\');
                     pind = pind(end);
                     pname = char(ClusteringData{1,'Filename'});
                     pname = pname(1:pind);
-                    [FileName,PathName] = uiputfile(fullfile(pname,'Extracted Contours.mat'),'Save contours with cluster assignments');
-                    if FileName ~= 0
-                        save(fullfile(PathName,FileName),'ClusteringData','-v7.3');
+                    [FileName, PathName] = uiputfile(fullfile(pname, 'K-Means Model.mat'), 'Save clustering model');
+                    if ~isnumeric(FileName)
+                        save(fullfile(PathName, FileName), 'C', 'num_pts','RES','freq_weight',...
+                            'relfreq_weight', 'slope_weight', 'concav_weight', 'duration_weight', 'pc_weight',... % 'pc2_weight',
+                            'ninflpt_weight','clusterName', 'spectrogramOptions');
                     end
-                    ClusteringData = CDBU;
-                    clear CDBU
-                case 'No'
-            end
-            
-            %% Sort the calls by how close they are to the cluster center
-            [~,idx] = sort(D);
-            clustAssign = clustAssign(idx);
-            ClusteringData = ClusteringData(idx,:);
-            
-            %% Make a montage with the top calls in each class
-            try
-                % Find the median call length
-                [~, i] = unique(clustAssign,'sorted');
-                maxlength = cellfun(@(spect) size(spect,2), ClusteringData.Spectrogram(i));
-                maxlength = round(prctile(maxlength,75));
-                maxBandwidth = cellfun(@(spect) size(spect,1), ClusteringData.Spectrogram(i));
-                maxBandwidth = round(prctile(maxBandwidth,75));
-                
-                % Make the figure
-                figure('Color','w','Position',[50,50,800,800]);
-%                 ax_montage = axes(f_montage);
-                % Make the image stack
-                %montageI = [];
-                montTile = tiledlayout('flow','TileSpacing','none');
-                for i = unique(clustAssign)'
-                    index = find(clustAssign==i,1);
-                    tmp = ClusteringData.Spectrogram{index,1};
-                    tmp = padarray(tmp,[0,max(maxlength-size(tmp,2),0)],'both');
-                    tmp = rescale(tmp,1,256);
-                    %montageI(:,:,i) = floor(imresize(tmp,[maxBandwidth,maxlength]));
-                    
-                    nexttile
-                    image(imtile(floor(imresize(tmp,[maxBandwidth,maxlength])), inferno, 'BackgroundColor', 'w', 'GridSize',[1 1]))
-                    title(num2str(i))
-                    axis off
+                else
+                    PathName = exportpath;
+                    FileName = sprintf('KMeansModel_%s_%dClusters.mat',batchtable.modelname{j},size(C,1));
+                    if ~isnumeric(FileName)
+                        save(fullfile(PathName, FileName), 'C', 'num_pts','RES','freq_weight',...
+                            'relfreq_weight', 'slope_weight', 'concav_weight', 'duration_weight', 'pc_weight',... % 'pc2_weight',
+                            'ninflpt_weight','spectrogramOptions');
+                    end
                 end
-%                 image(ax_montage, imtile(montageI, inferno, 'BackgroundColor', 'w', 'BorderSize', 2, 'GridSize',[5 NaN]))
-%                 axis(ax_montage, 'off')
-                title(montTile, 'Closest call to each cluster center')
-            catch
-                disp('For some reason, I couldn''t make a montage of the call exemplars')
-            end
-            
-            %% Undo sort
-            clustAssign(idx) = clustAssign;
-            ClusteringData(idx,:) = ClusteringData;
-            
-        case 'ARTwarp'
-            ClusteringData = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
-            if isempty(ClusteringData); return; end
-            FromExisting = questdlg('From existing model?','Cluster','Yes','No','No');
-            switch FromExisting% Load Art Model
-                case 'No'
-                    %% Get settings
-                    prompt = {'Matching Threshold:','Duplicate Category Merge Threshold:','Outlier Threshold','Learning Rate:','Interations:','Shape Importance','Frequency Importance','Duration Importance'};
-                    dlg_title = 'ARTwarp';
-                    num_lines = [1 50];
-                    defaultans = {'5','2.5','8','0.001','5','4','1','1'};
-                    settings = inputdlg(prompt,dlg_title,num_lines,defaultans);
-                    if isempty(settings)
-                        return
-                    end
-                    %% Cluster
-                    try
-                        [ARTnet, clustAssign] = ARTwarp2(ClusteringData.xFreq,settings);
-                    catch ME
-                        disp(ME)
-                    end
-                    
-                case 'Yes'
-                    [FileName,PathName] = uigetfile(fullfile(handles.data.squeakfolder,'Clustering Models','*.mat'));
-                    load(fullfile(PathName,FileName),'ARTnet','settings');
-                    if exist('ARTnet', 'var') ~= 1
-                        warndlg('ARTnet model could not be found. Is this file a trained ARTwarp2 model?')
-                        continue
-                    end
-                    
-            end
-            [clustAssign] = GetARTwarpClusters(ClusteringData.xFreq,ARTnet,settings);
-    end
-    
-    %     data = freq;
-    %         epsilon = 0.0001;
-    % mu = mean(data);
-    % data = data - mean(data)
-    % A = data'*data;
-    % [V,D,~] = svd(A);
-    % whMat = sqrt(size(data,1)-1)*V*sqrtm(inv(D + eye(size(D))*epsilon))*V';
-    % Xwh = data*whMat;
-    % invMat = pinv(whMat);
-    %
-    % data = Xwh
-    %
-    % data  = (freq-mean(freq)) ./ std(freq)
-    % [clustAssign, C]= kmeans(data,10,'Distance','sqeuclidean','Replicates',10);
-    
-    
-    %% Assign Names
-    % If the
-    if strcmp(choice, 'K-means (recommended)') && strcmp(FromExisting, 'Yes')
-        clustAssign = categorical(clustAssign, 1:size(C,1), cellstr(clusterName));
-    end
-        
-    %% Sort the calls by how close they are to the cluster center
-    [~,idx] = sort(ClusteringData.DistToCen);
-    clustAssign = clustAssign(idx);
-    ClusteringData = ClusteringData(idx,:);
-    
-    %% Jen Res Settings
-    saveChoice =  questdlg('Are you Jen?','Ultrawide Resolution Quick Fix','Yes','No','No');
-    switch saveChoice
-        case 'Yes'
-            ClusteringData(:,'IsJen') = num2cell(ones(height(ClusteringData),1));
-        case 'No'
-            ClusteringData(:,'IsJen') = num2cell(zeros(height(ClusteringData),1));
-    end
-    
-    [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
-    % Standardize clustering GUI image axes?
-%     saveChoice =  questdlg('Standardize clustering GUI image axes?','Standardize axes','Yes','No','No');
-%     switch saveChoice
-%         case 'Yes'
-%             CDBU = ClusteringData;
-%             %ClusteringData{:,'StandSpec'} = ClusteringData{:,'Spectrogram'};
-%             if length(unique(ClusteringData.TimeScale)) > 1
-%                 warning('%s\n%s\n%s',...
-%                     'WARNING: It looks like the spectrograms in this collection were not run consistently.',...
-%                     'This may be because you are loading multiple Extracted Contours that were run separately.',...
-%                     'Recommend running the original detection mats instead or the Clustering GUI images may look weird.')
-%                 bProceed = questdlg('Do you wish to proceed anyway?','Yes','No','No');
-%                 if strcmp(bProceed,'No')
-%                     error('You chose to stop.')
-%                 end
-%             end
-%             CDDurs = cell2mat(cellfun(@(x) size(x,2),ClusteringData.Spectrogram,'UniformOutput',false)).*ClusteringData.TimeScale;
-%             %resz = max(cell2mat(cellfun(@size,ClusteringData.Spectrogram,'UniformOutput',false)));
-%             pad = [zeros(size(CDDurs,1),1) max(CDDurs)-CDDurs];
-%             pad = floor(pad./ClusteringData.TimeScale);
-%             pad = num2cell(pad,2);
-%             ClusteringData.Spectrogram = cellfun(@(x,y) padarray(x, y, 255, 'post'),ClusteringData.Spectrogram,pad,'UniformOutput',false);
-%             [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
-%             ClusteringData = CDBU;
-%             clear CDBU CDDurs pad
-%         case 'No'
-%             [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);%, ...
-%             %[str2double(handles.data.settings.detectionSettings{3}) str2double(handles.data.settings.detectionSettings{2})]);
-%     end
-    
-    %% Undo sort
-    clustAssign(idx) = clustAssign;
-    ClusteringData(idx,:) = ClusteringData;
-end
-%% Update Files
-% Save the clustering model
-if FromExisting(1) == 'N'
-    switch choice
-        case 'K-means (recommended)'
-            pind = regexp(char(ClusteringData{1,'Filename'}),'\');
-            pind = pind(end);
-            pname = char(ClusteringData{1,'Filename'});
-            pname = pname(1:pind);
-            [FileName, PathName] = uiputfile(fullfile(pname, 'K-Means Model.mat'), 'Save clustering model');
-            %[FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder, 'Clustering Models', 'K-Means Model.mat'), 'Save clustering model');
-            if ~isnumeric(FileName)
-                save(fullfile(PathName, FileName), 'C', 'num_pts','RES','freq_weight',...
-                    'relfreq_weight', 'slope_weight', 'concav_weight', 'duration_weight', 'pc_weight',... % 'pc2_weight',
-                    'ninflpt_weight','clusterName', 'spectrogramOptions');
-            end
-        case 'ARTwarp'
-            [FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder, 'Clustering Models', 'ARTwarp Model.mat'), 'Save clustering model');
-            if ~isnumeric(FileName)
-                save(fullfile(PathName, FileName), 'ARTnet', 'settings');
-            end
-        case 'Variational Autoencoder'
-            [FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder, 'Clustering Models', 'Variational Autoencoder Model.mat'), 'Save clustering model');
-            if ~isnumeric(FileName)
-                save(fullfile(PathName, FileName), 'C', 'encoderNet', 'decoderNet', 'options', 'clusterName');
-            end
+                %[FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder, 'Clustering Models', 'K-Means Model.mat'), 'Save clustering model');
+                
+            case 'ARTwarp'
+                [FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder, 'Clustering Models', 'ARTwarp Model.mat'), 'Save clustering model');
+                if ~isnumeric(FileName)
+                    save(fullfile(PathName, FileName), 'ARTnet', 'settings');
+                end
+            case 'Variational Autoencoder'
+                [FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder, 'Clustering Models', 'Variational Autoencoder Model.mat'), 'Save clustering model');
+                if ~isnumeric(FileName)
+                    save(fullfile(PathName, FileName), 'C', 'encoderNet', 'decoderNet', 'options', 'clusterName');
+                end
+        end
     end
 end
 
 % Save the clusters
-saveChoice =  questdlg('Update files with new clusters?','Save clusters','Yes','No','No');
-switch saveChoice
+if ~SuperBatch
+    bUpdate =  questdlg('Update files with new clusters?','Save clusters','Yes','No','No');
+end
+switch bUpdate
     case 'Yes'
         UpdateCluster(ClusteringData, clustAssign, clusterName, rejected)
         update_folders(hObject, eventdata, handles);
@@ -529,10 +609,24 @@ function ninflpt = get_infl_pts(cont_concav,thresh_pos,thresh_neg)
     ninflpt = length(find(diff(ninflpt(ninflpt~=0))));
 end
 
-function C = get_kmeans_centroids(data)
+function C = get_kmeans_centroids(data,varargin)
 % Make a k-means model and return the centroids
-list = {'Elbow Optimized','Elbow w/ Min Clust Size','User Defined','Silhouette Batch'};
-[optimize,tf] = listdlg('PromptString','Choose a clustering method','ListString',list,'SelectionMode','single');
+if nargin == 1
+    list = {'Elbow Optimized','Elbow w/ Min Clust Size','User Defined','Silhouette Batch'};
+    [optimize,tf] = listdlg('PromptString','Choose a clustering method','ListString',list,'SelectionMode','single');
+elseif nargin == 2
+    batchtable = varargin{1};
+    tf = 1;
+    if strcmp(batchtable.runtype{:},'User Defined')
+        optimize = 3;
+    elseif strcmp(batchtable.runtype{:},'Silhouette Batch')
+        optimize = 4;
+    else
+        error('Something wrong with runtype in batch file')
+    end
+else
+    error('Something wrong with number of arguments passed to function')
+end
 %optimize = questdlg('Optimize Cluster Number?','Cluster Optimization','Elbow Optimized','Elbow w/ Min Clust Size','User Defined','Elbow Optimized');
 C = [];
 if tf == 1
@@ -573,22 +667,34 @@ if tf == 1
 
         %case 'User Defined'
         case 3
-            opt_options = inputdlg({'# of Clusters','Replicates'},'Cluster with k-means',[1; 1],{'15','10'});
-            %k = inputdlg({'Choose number of k-means:'},'Cluster with k-means',1,{'15'});
-            if isempty(opt_options); return; end
-            k = str2double(opt_options{1});
-            nReps = str2double(opt_options{2});
+            if nargin == 1
+                opt_options = inputdlg({'# of Clusters','Replicates'},'Cluster with k-means',[1; 1],{'15','10'});
+                %k = inputdlg({'Choose number of k-means:'},'Cluster with k-means',1,{'15'});
+                if isempty(opt_options); return; end
+                k = str2double(opt_options{1});
+                nReps = str2double(opt_options{2});
+            else
+                k = batchtable.k;
+                nReps = 1000;
+            end
             [~, C] = kmeans(data,k,'Distance','sqeuclidean','Replicates',nReps);
 
         %case 'Silhouette Batch'
         case 4
             %% User options
-            opt_options = inputdlg({'Min # of Clusters','Max # of Clusters','Replicates'},'Batch Options',[1; 1; 1],{'2','30','10'});
-
+            if nargin == 1
+                opt_options = inputdlg({'Min # of Clusters','Max # of Clusters','Replicates'},'Batch Options',[1; 1; 1],{'2','30','10'});
+                minclust = str2double(opt_options{1});
+                maxclust = str2double(opt_options{2});
+                nReps = str2double(opt_options{3});
+            else
+                minclust = 2;
+                maxclust = 100;
+                nReps = 1000;
+            end
+                
             %% Silhouette loop
             % Preallocate
-            minclust = str2double(opt_options{1});
-            maxclust = str2double(opt_options{2});
             maxS = zeros(1,(maxclust-minclust+1));
             %minS = zeros(1,(maxclust-minclust+1));
             %meanS = zeros(1,(maxclust-minclust+1));
@@ -609,7 +715,7 @@ if tf == 1
                 d.Message = sprintf('Running silhouette %d of %d',ind,maxclust-minclust+1);
                 drawnow
     
-                clust = kmeans(data,k,'Distance','sqeuclidean','Replicates',str2double(opt_options{3}));
+                clust = kmeans(data,k,'Distance','sqeuclidean','Replicates',nReps);
                 s = silhouette(data,clust);
                 ind = k-minclust+1;
 
@@ -651,6 +757,12 @@ if tf == 1
             legend('boxoff')
             xlabel('Number of clusters (k)')
             ylabel('Silhouette Value')
+            
+            if nargin == 2
+                figfilename = sprintf('BatchSilhouette_%s_%dClusters.png',batchtable.modelname,k);
+                saveas(gcf, fullfile(exportpath,figfilename));
+                close(gcf);
+            end
     end
 end
 end
