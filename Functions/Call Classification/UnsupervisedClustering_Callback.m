@@ -48,7 +48,7 @@ for j = 1:nruns
                         % Get parameter weights
                         switch choice
                             case 'K-means (recommended)'
-                                if ~SuperBatch
+                                if ~bSuperBatch
                                     [ClusteringData, ~, ~, ~, spectrogramOptions] = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
                                     if isempty(ClusteringData); return; end
                                     clusterParameters= inputdlg({'Number of Contour Pts','Shape weight','Concavity weight','Frequency weight', ...
@@ -84,7 +84,7 @@ for j = 1:nruns
                         end
 
                         % Make a k-means model and return the centroids
-                        if ~SuperBatch
+                        if ~bSuperBatch
                             C = get_kmeans_centroids(data);
                             if isempty(C); return; end
                         else
@@ -231,7 +231,7 @@ for j = 1:nruns
 
                     title(montTile, 'Centroid Contours with Max and Min Call Variation')
                 end
-                if SuperBatch
+                if bSuperBatch
                     figfilename = sprintf('CentroidContours_%s_%dClusters.png',batchtable.modelname{j},size(C,1));
                     saveas(gcf, fullfile(exportpath,figfilename));
                     close(gcf);
@@ -262,7 +262,7 @@ for j = 1:nruns
                 title(sprintf('Silhouettes of Clusters - %d Clusters',size(C,1)),...
                     sprintf('Mean = %0.2f  Med = %0.2f  Max = %0.2f  Prop<=0 = %0.2f  Mean>0 = %0.2f  Prop>0.8 = %0.2f', ...
                     meanS, medianS, maxS, below_zero, meanAbv_zero, greater8))
-                if SuperBatch
+                if bSuperBatch
                     figfilename = sprintf('SingleSilhouette_%s_%dClusters.png',batchtable.modelname{j},size(C,1));
                     saveas(gcf, fullfile(exportpath,figfilename));
                     close(gcf);
@@ -271,7 +271,7 @@ for j = 1:nruns
                 ClusteringData(:,'Silhouette') = num2cell(s);
 
                 %% Save the cluster assignments & silhoutte values
-                if ~SuperBatch
+                if ~bSuperBatch
                     saveChoice =  questdlg('Save Extracted Contours with Cluster Assignments?','Save cluster assignments','Yes','No','No');
                 end
                 switch saveChoice
@@ -330,7 +330,7 @@ for j = 1:nruns
                     disp('For some reason, I couldn''t make a montage of the call exemplars')
                 end
                 
-                if SuperBatch
+                if bSuperBatch
                     figfilename = sprintf('ClosestCall_%s_%dClusters.png',batchtable.modelname{j},size(C,1));
                     saveas(gcf, fullfile(exportpath,figfilename));
                     close(gcf);
@@ -402,7 +402,7 @@ for j = 1:nruns
         ClusteringData = ClusteringData(idx,:);
 
         %% Jen Res Settings
-        if ~SuperBatch
+        if ~bSuperBatch
             bJen =  questdlg('Are you Jen?','Ultrawide Resolution Quick Fix','Yes','No','No');
         end
         switch bJen
@@ -412,7 +412,7 @@ for j = 1:nruns
                 ClusteringData(:,'IsJen') = num2cell(zeros(height(ClusteringData),1));
         end
 
-        if ~SuperBatch
+        if ~bSuperBatch
             [~, clusterName, rejected, finished, clustAssign] = clusteringGUI(clustAssign, ClusteringData);
         else
             finished = 1;
@@ -460,7 +460,7 @@ for j = 1:nruns
     if FromExisting(1) == 'N'
         switch choice
             case 'K-means (recommended)'
-                if ~SuperBatch
+                if ~bSuperBatch
                     pind = regexp(char(ClusteringData{1,'Filename'}),'\');
                     pind = pind(end);
                     pname = char(ClusteringData{1,'Filename'});
@@ -497,7 +497,7 @@ for j = 1:nruns
 end
 
 % Save the clusters
-if ~SuperBatch
+if ~bSuperBatch
     bUpdate =  questdlg('Update files with new clusters?','Save clusters','Yes','No','No');
 end
 switch bUpdate
