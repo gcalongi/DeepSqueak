@@ -27,7 +27,7 @@ end
 
 for j = 1:nruns
     %Reset Clustering Data if running batch
-    if SuperBatch
+    if bSuperBatch
         ClusteringData = BatchCDSt;
     end
     finished = 0; % Repeated until
