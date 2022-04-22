@@ -52,8 +52,8 @@ for j = 1:nruns
                                     [ClusteringData, ~, ~, ~, spectrogramOptions] = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
                                     if isempty(ClusteringData); return; end
                                     clusterParameters= inputdlg({'Number of Contour Pts','Shape weight','Concavity weight','Frequency weight', ...
-                                        'Relative Frequency weight','Duration weight','Parsons Resolution','Parsons weight','Infl Pt weight'}, ...%,'Parsons2 weight'},
-                                        'Choose cluster parameters:',1,{'20','0','0','0','1','0','4','0','0'});%,'0'});
+                                        'Relative Frequency weight','Duration weight','Infl Pt weight','Parsons weight','Parsons Resolution'}, ...%,'Parsons2 weight'},
+                                        'Choose cluster parameters:',[1 30; 1 30; 1 30; 1 30; 1 30; 1 30; 1 30; 1 30; 1 15],{'20','0','0','0','1','0','0','0','4'});%,'0'});
                                     if isempty(clusterParameters); return; end
                                     num_pts = str2double(clusterParameters{1});
                                     slope_weight = str2double(clusterParameters{2});
@@ -61,9 +61,13 @@ for j = 1:nruns
                                     freq_weight = str2double(clusterParameters{4});
                                     relfreq_weight = str2double(clusterParameters{5});
                                     duration_weight = str2double(clusterParameters{6});
-                                    RES = str2double(clusterParameters{7});
+                                    ninflpt_weight = str2double(clusterParameters{7});
                                     pc_weight = str2double(clusterParameters{8});
-                                    ninflpt_weight = str2double(clusterParameters{9});
+                                    RES = str2double(clusterParameters{9});
+                                    if RES <= 0
+                                        warning('RES cannot be <= 0; assuming pc_weight is 0')
+                                        pc_weight = 0;
+                                    end
                                     %pc2_weight = str2double(clusterParameters{8});
                                 else
                                     num_pts = 20;
@@ -563,6 +567,8 @@ ninflpt     = cell2mat(cellfun(@(x) get_infl_pts(x,thresh_pos,thresh_neg),concav
 %MX          = quantile(slope,0.9,'all');
 %MX          = 2*std(slope,0,'all');
 %MX          = max(slope,[],'all');
+% RES must be > 0
+RES         = max(RES, 1);
 MX          = (max(slope,[],'all')/(RES+1))*RES;
 pc          = round(slope.*(RES/MX));
 pc(pc>RES)  = RES;
