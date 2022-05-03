@@ -324,7 +324,8 @@ for j = 1:nruns
 
                         nexttile
                         image(imtile(floor(imresize(tmp,[maxBandwidth,maxlength])), inferno, 'BackgroundColor', 'w', 'GridSize',[1 1]))
-                        title(num2str(i))
+                        title(sprintf('(%d)  ID = %s',i,ClusteringData.UserID(index)))
+                        %title(num2str(i))
                         axis off
                     end
     %                 image(ax_montage, imtile(montageI, inferno, 'BackgroundColor', 'w', 'BorderSize', 2, 'GridSize',[5 NaN]))
