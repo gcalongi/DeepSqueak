@@ -26,6 +26,8 @@ maxDuration = [];
 freqRange = [];
 xFreq = [];
 xTime = [];
+FreqScale = [];
+TimeScale = [];
 stats.Power = [];
 
 % Select the files
