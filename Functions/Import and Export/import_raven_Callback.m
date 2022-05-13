@@ -4,13 +4,14 @@ function import_raven_Callback(hObject, eventdata, handles)
 % (http://www.birds.cornell.edu/brp/raven/RavenOverview.html)
 
 % User recommendation warning
-warning('%s\n%s\n%s\n%s\n%s\n%s\n%s\n', 'It is highly recommended when importing a Raven selection table',...
-    'that there is a "filename" field with the filename of the wav file',...
-    'containing the annotation, a "startsound" field with the start of the annotation in seconds since the',...
-    'beginning of that audio file and an "endsound" field with the end of the',...
-    'annotation in seconds since the beginning of that audio file',...
+warning('%s\n%s\n%s\n%s\n%s\n\n%s\n%s\n%s\n', 'It is highly recommended when importing a Raven selection table',...
+    'that there is a "Begin File" field with the filename of the wav file',...
+    'containing the annotation and a "File Offset (s)" containing the time in seconds',...
+    'since the start of that wav file.  There must also be either an "End Time (s)" field',...
+    'or a "Delta Time (s)" field so that the right edge of the call within the file can be calculated.',...
     'If those conditions are not met, DS will attempt to match audio files to',...
-    'selection tables using the filenames, but this only works if there is a one-to-one correspondence.')
+    'selection tables using the filenames, but this only works if there is a one-to-one correspondence,',...
+    'and may cause unexpected behavior down the road.')
 
 answer = questdlg('Are you trying to import multiple Raven tables and/or audio files?', ...
 	'Multi-Raven Import?', ...
@@ -72,15 +73,16 @@ if ~bAutoTry
             ravenTable = readtable([ravenpath ravenname{i}], 'Delimiter', 'tab');
         end
 
-        if any(strcmp('filename',ravenTable.Properties.VariableNames))
-            if ~any(strcmp('startsound',ravenTable.Properties.VariableNames))
-                error('"filename" is present but "startsound" is not a field in your Raven table')
-            elseif  ~any(strcmp('endsound',ravenTable.Properties.VariableNames))
-                error('"filename" and "startsound" are present but "endsound" is not a field in your Raven table')
+        if any(strcmp('BeginFile',ravenTable.Properties.VariableNames))
+            if ~ismember('FileOffset_s_', ravenTable.Properties.VariableNames)
+                error('"BeginFile" is present but "FileOffset_s_" is not a field in your Raven table')
+            elseif ~ismember('DeltaTime_s_', ravenTable.Properties.VariableNames) && ~ismember('EndTime_s_', ravenTable.Properties.VariableNames)
+                error('%s\n%s\n', '"BeginFile" and "FileOffset_s_" are present but both "DeltaTime_s_"',...
+                    'and "EndTime_s_" are missing from your Raven table and you need at least one of them.')
             end
-            audioname{i} = unique(ravenTable.filename);
+            audioname{i} = unique(ravenTable.BeginFile);
         else
-            warning('"filename" is not a field in your Raven table - will attempt to auto-match a wav file')
+            warning('"BeginFile" is not a field in your Raven table - will attempt to auto-match a wav file')
             bAutoTry = true;
         end
 
@@ -130,7 +132,7 @@ for i = 1:length(ravenname)
     end
     for j = 1:length(audioname{i})
         if length(audioname{i}) > 1
-            subTable = ravenTable(strcmp(audioname{i}{j},ravenTable.filename),:);
+            subTable = ravenTable(strcmp(audioname{i}{j},ravenTable.BeginFile),:);
         else
             subTable = ravenTable;
         end
@@ -146,8 +148,8 @@ for i = 1:length(ravenname)
         end
         
         % fix some compatibility issues with Raven's naming
-        if ismember('startsound', subTable.Properties.VariableNames)
-            subTable.BeginTime_s_ = subTable.startsound;
+        if ismember('FileOffset_s_', subTable.Properties.VariableNames)
+            subTable.BeginTime_s_ = subTable.FileOffset_s_;
         end
 
         %% Get the data from the raven file
