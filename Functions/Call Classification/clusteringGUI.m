@@ -258,7 +258,7 @@ classdef clusteringGUI < handle
             colorMask = interp1(linspace(obj.minfreq, obj.maxfreq, size(obj.ColorData,1)), obj.ColorData, freqdata, 'nearest', 'extrap');
             colorIM = im .* colorMask ./ 255;
             
-            if any(strcmp('NumContPts',ClusteringData.Properties.VariableNames))
+            if ismember('NumContPts',ClusteringData.Properties.VariableNames)
                 %Overlay the contour used for the k-means clustering
                 resz = new_size./im_size;            
                 %contourfreq = cell2mat(cellfun(@(x) imresize(x',[1 ClusteringData.NumContPts(clustIndex(callID))]) ,table2cell(obj.ClusteringData(clustIndex(callID),'xFreq')),'UniformOutput',0));
@@ -318,18 +318,44 @@ classdef clusteringGUI < handle
             xticks(axis_handles,xtick_positions(2:end));
             xticklabels(axis_handles,x_ticks);
             yticklabels(axis_handles,y_ticks);
-            if any(strcmp('Type', obj.ClusteringData.Properties.VariableNames)) && ...
-                    any(strcmp('DistToCen', obj.ClusteringData.Properties.VariableNames)) 
-                if any(strcmp('UserID', obj.ClusteringData.Properties.VariableNames))
-                    title(axis_handles,{sprintf('%s %s I: %d',obj.ClusteringData.UserID(i), obj.ClusteringData.Type(i), obj.ClusteringData.NumInflPts(i)); ...
-                        sprintf('D: %0.3f  S: %0.3f', obj.ClusteringData.DistToCen(i), obj.ClusteringData.Silhouette(i))}, ...
-                        'Color','white','Interpreter','none');
-                else
-                    title(axis_handles,{sprintf('%s I: %d', obj.ClusteringData.Type(i), obj.ClusteringData.NumInflPts(i));  ...
-                        sprintf('D: %0.3f  S: %0.3f', obj.ClusteringData.DistToCen(i), obj.ClusteringData.Silhouette(i))}, ...
-                        'Color','white','Interpreter','none');
-                end
+            
+            sUID = 'N/A';
+            sType = 'N/A';
+            sD2C = 'N/A';
+            sI = 'N/A';
+            sSil = 'N/A';
+            if ismember('UserID',obj.ClusteringData.Properties.VariableNames)
+                sUID = obj.ClusteringData.UserID(i);
             end
+            if ismember('Type',obj.ClusteringData.Properties.VariableNames)
+                sType = obj.ClusteringData.Type(i);
+            end
+            if ismember('DistToCen',obj.ClusteringData.Properties.VariableNames)
+                sD2C = obj.ClusteringData.DistToCen(i);
+            end
+            if ismember('NumInflPts',obj.ClusteringData.Properties.VariableNames)
+                sI = obj.ClusteringData.NumInflPts(i);
+            end
+            if ismember('Silhouette',obj.ClusteringData.Properties.VariableNames)
+                sSil = obj.ClusteringData.Silhouette(i);
+            end
+            
+            title(axis_handles,{sprintf('%s %s I: %d',sUID, sType, sI); ...
+                sprintf('D: %0.3f  S: %0.3f', sD2C, sSil)}, ...
+                'Color','white','Interpreter','none');
+            
+%             if any(strcmp('Type', obj.ClusteringData.Properties.VariableNames)) && ...
+%                     any(strcmp('DistToCen', obj.ClusteringData.Properties.VariableNames)) 
+%                 if any(strcmp('UserID', obj.ClusteringData.Properties.VariableNames))
+%                     title(axis_handles,{sprintf('%s %s I: %d',obj.ClusteringData.UserID(i), obj.ClusteringData.Type(i), obj.ClusteringData.NumInflPts(i)); ...
+%                         sprintf('D: %0.3f  S: %0.3f', obj.ClusteringData.DistToCen(i), obj.ClusteringData.Silhouette(i))}, ...
+%                         'Color','white','Interpreter','none');
+%                 else
+%                     title(axis_handles,{sprintf('%s I: %d', obj.ClusteringData.Type(i), obj.ClusteringData.NumInflPts(i));  ...
+%                         sprintf('D: %0.3f  S: %0.3f', obj.ClusteringData.DistToCen(i), obj.ClusteringData.Silhouette(i))}, ...
+%                         'Color','white','Interpreter','none');
+%                 end
+%             end
             xlabel(axis_handles,'Time (s)');
             ylabel(axis_handles,'Frequency (kHz)');
         end
@@ -356,34 +382,64 @@ classdef clusteringGUI < handle
                     
                     % Display the file ID and call number on mouse hover
                     [~,call_file,~] = fileparts(obj.ClusteringData.Filename(clustIndex(callID)));
-                    if any(strcmp('Type', obj.ClusteringData.Properties.VariableNames))
-                            if any(strcmp('UserID', obj.ClusteringData.Properties.VariableNames))
-                                call_id = sprintf('Call: %u  UserID: %s  Type: %s', ...
-                                    obj.ClusteringData.callID(clustIndex(callID)), ...
-                                    obj.ClusteringData.UserID(clustIndex(callID)), ...
-                                    obj.ClusteringData.Type(clustIndex(callID)));
-                            else
-                                call_id = sprintf('Call: %u  Type: %s', ...
-                                    obj.ClusteringData.callID(clustIndex(callID)), ...
-                                    obj.ClusteringData.Type(clustIndex(callID)));
-                            end
-                    else
-                        call_id = sprintf('Call: %u', obj.ClusteringData.callID(clustIndex(callID)));
+                    sUID = 'N/A';
+                    sType = 'N/A';
+                    sD2C = 'N/A';
+                    sI = 'N/A';
+                    sSil = 'N/A';
+                    
+                    if ismember('UserID',obj.ClusteringData.Properties.VariableNames)
+                        sUID = obj.ClusteringData.UserID(clustIndex(callID));
                     end
-                    if any(strcmp('DistToCen', obj.ClusteringData.Properties.VariableNames)) 
-                        if any(strcmp('Silhouette', obj.ClusteringData.Properties.VariableNames)) 
-                            call_stats = sprintf('Dist to Cent: %0.5f  Silhouette Val: %0.5f  Num Infl Pts: %d', ...
-                                obj.ClusteringData.DistToCen(clustIndex(callID)), ...
-                                obj.ClusteringData.Silhouette(clustIndex(callID)), ...
-                                obj.ClusteringData.NumInflPts(clustIndex(callID)));
-                        else 
-                            call_stats = sprintf('Dist to Cent: %0.5f  Num Infl Pts: %d', ...
-                                obj.ClusteringData.DistToCen(clustIndex(callID)), ...
-                                obj.ClusteringData.NumInflPts(clustIndex(callID)));
-                        end
-                    else
-                        call_stats = '';
+                    if ismember('Type',obj.ClusteringData.Properties.VariableNames)
+                        sType = obj.ClusteringData.Type(clustIndex(callID));
                     end
+                    if ismember('DistToCen',obj.ClusteringData.Properties.VariableNames)
+                        sD2C = obj.ClusteringData.DistToCen(clustIndex(callID));
+                    end
+                    if ismember('NumInflPts',obj.ClusteringData.Properties.VariableNames)
+                        sI = obj.ClusteringData.NumInflPts(clustIndex(callID));
+                    end
+                    if ismember('Silhouette',obj.ClusteringData.Properties.VariableNames)
+                        sSil = obj.ClusteringData.Silhouette(clustIndex(callID));
+                    end
+
+                    call_id = sprintf('Call: %u  UserID: %s  Type: %s', ...
+                        obj.ClusteringData.callID(clustIndex(callID)), ...
+                        sUID, ...
+                        sType);
+                    call_stats = sprintf('Dist to Cent: %0.5f  Silhouette Val: %0.5f  Num Infl Pts: %d', ...
+                        sD2C, ...
+                        sSil, ...
+                        sI);
+%                     if any(strcmp('Type', obj.ClusteringData.Properties.VariableNames))
+%                             if any(strcmp('UserID', obj.ClusteringData.Properties.VariableNames))
+%                                 call_id = sprintf('Call: %u  UserID: %s  Type: %s', ...
+%                                     obj.ClusteringData.callID(clustIndex(callID)), ...
+%                                     obj.ClusteringData.UserID(clustIndex(callID)), ...
+%                                     obj.ClusteringData.Type(clustIndex(callID)));
+%                             else
+%                                 call_id = sprintf('Call: %u  Type: %s', ...
+%                                     obj.ClusteringData.callID(clustIndex(callID)), ...
+%                                     obj.ClusteringData.Type(clustIndex(callID)));
+%                             end
+%                     else
+%                         call_id = sprintf('Call: %u', obj.ClusteringData.callID(clustIndex(callID)));
+%                     end
+%                     if any(strcmp('DistToCen', obj.ClusteringData.Properties.VariableNames)) 
+%                         if any(strcmp('Silhouette', obj.ClusteringData.Properties.VariableNames)) 
+%                             call_stats = sprintf('Dist to Cent: %0.5f  Silhouette Val: %0.5f  Num Infl Pts: %d', ...
+%                                 obj.ClusteringData.DistToCen(clustIndex(callID)), ...
+%                                 obj.ClusteringData.Silhouette(clustIndex(callID)), ...
+%                                 obj.ClusteringData.NumInflPts(clustIndex(callID)));
+%                         else 
+%                             call_stats = sprintf('Dist to Cent: %0.5f  Num Infl Pts: %d', ...
+%                                 obj.ClusteringData.DistToCen(clustIndex(callID)), ...
+%                                 obj.ClusteringData.NumInflPts(clustIndex(callID)));
+%                         end
+%                     else
+%                         call_stats = '';
+%                     end
                     pointerBehavior.enterFcn = @(~,~) set(obj.call_id_text, 'string', {call_id, call_stats, call_file});
                     pointerBehavior.traverseFcn = [];
                     pointerBehavior.exitFcn = @(~,~) set(obj.call_id_text, 'string', '');

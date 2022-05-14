@@ -151,94 +151,96 @@ for j = 1:nruns
     %             contourfreq = cellfun(@(x) {imresize(x',[1 num_pts])}, ClusteringData.xFreq,'UniformOutput',0);
     %             contourtime = cellfun(@(x) {imresize(x,[1 num_pts])}, ClusteringData.xTime,'UniformOutput',0);
 
-                contoursmth = cellfun(@(x) smooth(x,5), ClusteringData.xFreq,'UniformOutput',false);
-                contourtimecc = cellfun(@(x) {linspace(min(x),max(x),num_pts+8)},ClusteringData.xTime,'UniformOutput',false);
-                contourfreqcc = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimecc,'UniformOutput',false);
-                contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+1)},ClusteringData.xTime,'UniformOutput',false);
-                contourfreqsl = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimesl,'UniformOutput',false);
-                contourtime = cellfun(@(x) {linspace(min(x),max(x),num_pts)},ClusteringData.xTime,'UniformOutput',false);
-                contourfreq = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtime,'UniformOutput',false);
+                if ismember('NumContPts',ClusteringData.Properties.VariableNames)
+                    contoursmth = cellfun(@(x) smooth(x,5), ClusteringData.xFreq,'UniformOutput',false);
+                    contourtimecc = cellfun(@(x) {linspace(min(x),max(x),num_pts+8)},ClusteringData.xTime,'UniformOutput',false);
+                    contourfreqcc = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimecc,'UniformOutput',false);
+                    contourtimesl = cellfun(@(x) {linspace(min(x),max(x),num_pts+1)},ClusteringData.xTime,'UniformOutput',false);
+                    contourfreqsl = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimesl,'UniformOutput',false);
+                    contourtime = cellfun(@(x) {linspace(min(x),max(x),num_pts)},ClusteringData.xTime,'UniformOutput',false);
+                    contourfreq = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtime,'UniformOutput',false);
 
-                %Now all based on contoursmth
-                ClusteringData(:,'xFreq_Smooth') = contoursmth;
-                ClusteringData(:,'xFreq_Contour_CC') = contourfreqcc;
-                ClusteringData(:,'xTime_Contour_CC') = contourtimecc;
-                ClusteringData(:,'xFreq_Contour_Sl') = contourfreqsl;
-                ClusteringData(:,'xTime_Contour_Sl') = contourtimesl;
-                ClusteringData(:,'xFreq_Contour') = contourfreq;
-                ClusteringData(:,'xTime_Contour') = contourtime;
+                    %Now all based on contoursmth
+                    ClusteringData(:,'xFreq_Smooth') = contoursmth;
+                    ClusteringData(:,'xFreq_Contour_CC') = contourfreqcc;
+                    ClusteringData(:,'xTime_Contour_CC') = contourtimecc;
+                    ClusteringData(:,'xFreq_Contour_Sl') = contourfreqsl;
+                    ClusteringData(:,'xTime_Contour_Sl') = contourtimesl;
+                    ClusteringData(:,'xFreq_Contour') = contourfreq;
+                    ClusteringData(:,'xTime_Contour') = contourtime;
 
-                % Calculate and save # of inflection points based on full
-                % contours for each whistle
-    %             concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
-    %             % Normalize with entire dataset
-    %             [~,mu,sigma] = zscore(cell2mat(concavall));
-    %             ninflpt     = cellfun(@(x) get_infl_pts((diff(x,2)-mu)./sigma),ClusteringData.xFreq,'UniformOutput',false);
-                %contourfreqcc   = cell2mat(cellfun(@(x) x{:}, contourfreqcc,'UniformOutput',false)); 
-                contourfreqcc   = cellfun(@(x) x{:}, contourfreqcc,'UniformOutput',false); 
-                %contourfreqcc   = cellfun(@(x) x{:}, contoursmth,'UniformOutput',false); 
-                % First deriv (deltax = 2 pts)
-                %concavall   = contourfreqcc(:,5:end)-contourfreqcc(:,1:end-4);
-                concavall   = cellfun(@(x) x(5:end)-x(1:end-4),contourfreqcc,'UniformOutput',false);
-                % Second deriv (deltax = 2 pts)
-                %concavall   = concavall(:,5:end)-concavall(:,1:end-4);
-                concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
-                % Second deriv (deltax = 2 pts)
-                % Normalize concavity over entire dataset
-                %zccall = num2cell(zscore(concavall,0,'all'),2);
-                %[~,mu,sigma] = zscore(cell2mat(concavall),0,'all');
-                thresh_pos = cell2mat(concavall);
-                thresh_pos = thresh_pos(thresh_pos > 0);
-                thresh_pos = median(thresh_pos);
-                thresh_neg = cell2mat(concavall);
-                thresh_neg = thresh_neg(thresh_neg < 0);
-                thresh_neg = median(thresh_neg);
-                % Calculate # of inflection pts for each contour
-                %ninflpt     = cellfun(@(x) get_infl_pts(x),zccall,'UniformOutput',false);
-                ninflpt     = cellfun(@(x) get_infl_pts(x,thresh_pos,thresh_neg),concavall,'UniformOutput',false);
-                ClusteringData(:,'NumInflPts') = ninflpt;
+                    % Calculate and save # of inflection points based on full
+                    % contours for each whistle
+        %             concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
+        %             % Normalize with entire dataset
+        %             [~,mu,sigma] = zscore(cell2mat(concavall));
+        %             ninflpt     = cellfun(@(x) get_infl_pts((diff(x,2)-mu)./sigma),ClusteringData.xFreq,'UniformOutput',false);
+                    %contourfreqcc   = cell2mat(cellfun(@(x) x{:}, contourfreqcc,'UniformOutput',false)); 
+                    contourfreqcc   = cellfun(@(x) x{:}, contourfreqcc,'UniformOutput',false); 
+                    %contourfreqcc   = cellfun(@(x) x{:}, contoursmth,'UniformOutput',false); 
+                    % First deriv (deltax = 2 pts)
+                    %concavall   = contourfreqcc(:,5:end)-contourfreqcc(:,1:end-4);
+                    concavall   = cellfun(@(x) x(5:end)-x(1:end-4),contourfreqcc,'UniformOutput',false);
+                    % Second deriv (deltax = 2 pts)
+                    %concavall   = concavall(:,5:end)-concavall(:,1:end-4);
+                    concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
+                    % Second deriv (deltax = 2 pts)
+                    % Normalize concavity over entire dataset
+                    %zccall = num2cell(zscore(concavall,0,'all'),2);
+                    %[~,mu,sigma] = zscore(cell2mat(concavall),0,'all');
+                    thresh_pos = cell2mat(concavall);
+                    thresh_pos = thresh_pos(thresh_pos > 0);
+                    thresh_pos = median(thresh_pos);
+                    thresh_neg = cell2mat(concavall);
+                    thresh_neg = thresh_neg(thresh_neg < 0);
+                    thresh_neg = median(thresh_neg);
+                    % Calculate # of inflection pts for each contour
+                    %ninflpt     = cellfun(@(x) get_infl_pts(x),zccall,'UniformOutput',false);
+                    ninflpt     = cellfun(@(x) get_infl_pts(x,thresh_pos,thresh_neg),concavall,'UniformOutput',false);
+                    ClusteringData(:,'NumInflPts') = ninflpt;
 
 
     % Normalize concavity over entire dataset
     %zccall = num2cell(zscore(concavall,0,'all'),2);
     % Calculate # of inflection pts for each contour
 
-                %% Centroid contours
-                if relfreq_weight > 0
-                    % Generate relative frequencies
-                    allrelfreq = ClusteringData.xFreq_Contour_Sl;
-                    allrelfreq = cell2mat(allrelfreq);
-                    allrelfreq = allrelfreq(:,2:end)-allrelfreq(:,1);
-                    allrelfreq = zscore(allrelfreq,0,'all');
+                    %% Centroid contours
+                    if relfreq_weight > 0
+                        % Generate relative frequencies
+                        allrelfreq = ClusteringData.xFreq_Contour_Sl;
+                        allrelfreq = cell2mat(allrelfreq);
+                        allrelfreq = allrelfreq(:,2:end)-allrelfreq(:,1);
+                        allrelfreq = zscore(allrelfreq,0,'all');
 
-                    minylim = min(allrelfreq,[],'all');
-                    maxylim = max(allrelfreq,[],'all');
+                        minylim = min(allrelfreq,[],'all');
+                        maxylim = max(allrelfreq,[],'all');
 
-                    % Make the figure
-                    figure('Color','w','Position',[50,50,800,800]);
-                    montTile = tiledlayout('flow','TileSpacing','none');
+                        % Make the figure
+                        figure('Color','w','Position',[50,50,800,800]);
+                        montTile = tiledlayout('flow','TileSpacing','none');
 
-                    for i = unique(clustAssign)'
-                        thisclust = allrelfreq(ClusteringData.ClustAssign == i,:);
-                        thiscent = C(i,num_pts+1:2*num_pts);
-                        % Undo normalization for scaling
-                        thiscent = (thiscent-0.001)./relfreq_weight;
+                        for i = unique(clustAssign)'
+                            thisclust = allrelfreq(ClusteringData.ClustAssign == i,:);
+                            thiscent = C(i,num_pts+1:2*num_pts);
+                            % Undo normalization for scaling
+                            thiscent = (thiscent-0.001)./relfreq_weight;
 
-                        maxcont = max(thisclust,[],1);
-                        mincont = min(thisclust,[],1);
+                            maxcont = max(thisclust,[],1);
+                            mincont = min(thisclust,[],1);
 
-                        nexttile
-                        plot(1:num_pts,thiscent,1:num_pts,maxcont,'r--',1:num_pts,mincont,'r--')
-                        ylim([minylim maxylim])
-                        title(sprintf('(%d)  n = %d',i,size(thisclust,1)))
+                            nexttile
+                            plot(1:num_pts,thiscent,1:num_pts,maxcont,'r--',1:num_pts,mincont,'r--')
+                            ylim([minylim maxylim])
+                            title(sprintf('(%d)  n = %d',i,size(thisclust,1)))
+                        end
+
+                        title(montTile, 'Centroid Contours with Max and Min Call Variation')
                     end
-
-                    title(montTile, 'Centroid Contours with Max and Min Call Variation')
-                end
-                if bSuperBatch
-                    figfilename = sprintf('CentroidContours_%s_%dClusters.png',batchtable.modelname{j},size(C,1));
-                    saveas(gcf, fullfile(exportpath,figfilename));
-                    close(gcf);
+                    if bSuperBatch
+                        figfilename = sprintf('CentroidContours_%s_%dClusters.png',batchtable.modelname{j},size(C,1));
+                        saveas(gcf, fullfile(exportpath,figfilename));
+                        close(gcf);
+                    end
                 end
 
                 %% Silhouette Graph for This Run
