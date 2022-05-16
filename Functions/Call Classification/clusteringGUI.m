@@ -258,7 +258,7 @@ classdef clusteringGUI < handle
             colorMask = interp1(linspace(obj.minfreq, obj.maxfreq, size(obj.ColorData,1)), obj.ColorData, freqdata, 'nearest', 'extrap');
             colorIM = im .* colorMask ./ 255;
             
-            if ismember('NumContPts',ClusteringData.Properties.VariableNames)
+            if ismember('NumContPts',ClusteringData.Properties.VariableNames) && ~all(ClusteringData.NumContPts==0)
                 %Overlay the contour used for the k-means clustering
                 resz = new_size./im_size;            
                 %contourfreq = cell2mat(cellfun(@(x) imresize(x',[1 ClusteringData.NumContPts(clustIndex(callID))]) ,table2cell(obj.ClusteringData(clustIndex(callID),'xFreq')),'UniformOutput',0));

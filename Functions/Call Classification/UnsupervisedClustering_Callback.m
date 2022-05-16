@@ -106,7 +106,7 @@ for j = 1:nruns
                             case 'K-means (recommended)'
                                 spectrogramOptions = [];
                                 % Preset variables
-                                num_pts = 12;
+                                num_pts = 20;
                                 RES = 1;
                                 freq_weight = 0;
                                 relfreq_weight = 0;
@@ -151,7 +151,8 @@ for j = 1:nruns
     %             contourfreq = cellfun(@(x) {imresize(x',[1 num_pts])}, ClusteringData.xFreq,'UniformOutput',0);
     %             contourtime = cellfun(@(x) {imresize(x,[1 num_pts])}, ClusteringData.xTime,'UniformOutput',0);
 
-                if ismember('NumContPts',ClusteringData.Properties.VariableNames)
+                if ismember('NumContPts',ClusteringData.Properties.VariableNames) && ~all(ClusteringData.NumContPts==0)
+
                     contoursmth = cellfun(@(x) smooth(x,5), ClusteringData.xFreq,'UniformOutput',false);
                     contourtimecc = cellfun(@(x) {linspace(min(x),max(x),num_pts+8)},ClusteringData.xTime,'UniformOutput',false);
                     contourfreqcc = cellfun(@(x,y,z) {interp1(x,y,z{:})},ClusteringData.xTime,contoursmth,contourtimecc,'UniformOutput',false);

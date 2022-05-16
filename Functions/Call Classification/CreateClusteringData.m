@@ -110,7 +110,7 @@ for i = 1:height(Calls)
     waitbar(i/height(Calls),h, sprintf('Loading File %u of %u', Calls.audiodata_index(i), length(fileName)));
     
     % Change the audio file if needed
-    if Calls.audiodata_index(i) ~= currentAudioFile;
+    if Calls.audiodata_index(i) ~= currentAudioFile
         audioReader.audiodata = audiodata{Calls.audiodata_index(i)};
         currentAudioFile = Calls.audiodata_index(i);
         perFileCallID = 0;
@@ -131,6 +131,10 @@ for i = 1:height(Calls)
     else
     im = adapthisteq(flipud(pow),'NumTiles',[2 2],'ClipLimit',.005,'Distribution','rayleigh','Alpha',.4);    
     end
+    
+    spectrange = audioReader.audiodata.SampleRate / 2000; % get frequency range of spectrogram in KHz
+    FreqScale = spectrange / (1 + floor(nfft / 2)); % size of frequency pixels
+    TimeScale = (wind - noverlap) / audioReader.audiodata.SampleRate; % size of time pixels
 
     if p.Results.forClustering
         % If each call was saved with its own Entropy and Amplitude
@@ -143,9 +147,6 @@ for i = 1:height(Calls)
         else
             stats = CalculateStats(I,wind,noverlap,nfft,rate,box,handles.data.settings.EntropyThreshold,handles.data.settings.AmplitudeThreshold);
         end
-        spectrange = audioReader.audiodata.SampleRate / 2000; % get frequency range of spectrogram in KHz
-        FreqScale = spectrange / (1 + floor(nfft / 2)); % size of frequency pixels
-        TimeScale = (wind - noverlap) / audioReader.audiodata.SampleRate; % size of time pixels
         xFreq = FreqScale * (stats.ridgeFreq_smooth) + Calls.Box(i,2);
         xTime = stats.ridgeTime * TimeScale;
     else
