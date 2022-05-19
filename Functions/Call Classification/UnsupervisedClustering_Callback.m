@@ -544,14 +544,21 @@ ReshapedX   = cell2mat(cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,allc
 concav      = diff(ReshapedX,2,2);
 % Pull concavity based on full contour
 %concavall   = cellfun(@(x) diff(x,2),ClusteringData.xFreq,'UniformOutput',false);
+
 % Pull concavity based on 20-pt contour
-timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+8),ClusteringData.xTime,'UniformOutput',false);
+timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+4),ClusteringData.xTime,'UniformOutput',false);
 concavall   = cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,allconts,timelsp,'UniformOutput',false);
 % First deriv (deltax = 2 pts)
 %concavall   = concavall(:,5:end)-concavall(:,1:end-4);
 concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
 %Better (smoothed) slope
 slope = zscore(cell2mat(concavall),[],'all');
+
+timelsp     = cellfun(@(x) linspace(min(x),max(x),num_pts+8),ClusteringData.xTime,'UniformOutput',false);
+concavall   = cellfun(@(x,y,z) interp1(x,y,z),ClusteringData.xTime,allconts,timelsp,'UniformOutput',false);
+% First deriv (deltax = 2 pts)
+%concavall   = concavall(:,5:end)-concavall(:,1:end-4);
+concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
 % Second deriv (deltax = 2 pts)
 %concavall   = concavall(:,5:end)-concavall(:,1:end-4);
 concavall   = cellfun(@(x) x(5:end)-x(1:end-4),concavall,'UniformOutput',false);
