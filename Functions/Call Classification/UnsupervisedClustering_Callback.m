@@ -51,7 +51,7 @@ for j = 1:nruns
                                 if ~bSuperBatch
                                     [ClusteringData, ~, ~, ~, spectrogramOptions] = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
                                     if isempty(ClusteringData); return; end
-                                    clusterParameters= inputdlg({'Number of Contour Pts','Shape weight','Concavity weight','Frequency weight', ...
+                                    clusterParameters= inputdlg({'Number of Contour Pts','Slope weight','Concavity weight','Frequency weight', ...
                                         'Relative Frequency weight','Duration weight','Infl Pt weight','Parsons weight','Parsons Resolution'}, ...%,'Parsons2 weight'},
                                         'Choose cluster parameters:',[1 30; 1 30; 1 30; 1 30; 1 30; 1 30; 1 30; 1 30; 1 15],{'20','0','0','0','1','0','0','0','4'});%,'0'});
                                     if isempty(clusterParameters); return; end
