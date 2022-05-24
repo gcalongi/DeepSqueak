@@ -1,4 +1,4 @@
-function TrainPostHocDenoiser_Callback(hObject, eventdata, handles)
+function TrainPostHocDenoiser_Callback(~, ~, handles)
 
 % This function trains a convolutional neural network to detected if
 % identified sounds are USVs or Noise. To use this function, prepare call
@@ -13,10 +13,6 @@ images = zeros([options.imageSize, size(ClusteringData, 1)]);
 for i = 1:size(ClusteringData, 1)
     images(:,:,:,i) = imresize(ClusteringData.Spectrogram{i}, options.imageSize(1:2));
 end
-% wind=options.spectrogram.windowsize;
-% noverlap=options.spectrogram.overlap;
-% nfft=options.spectrogram.nfft;
-imageSize=options.imageSize;
 
 %% Make all categories 'Title Case'
 cats = categories(Class);
@@ -111,7 +107,7 @@ h.ColorbarVisible = 'off';
 colormap(inferno);
 
 [FileName, PathName] = uiputfile(fullfile(handles.data.squeakfolder,'Denoising Network', 'CleaningNet.mat'),'Save Denoising Network');
-save(fullfile(PathName,FileName),'DenoiseNet','wind','noverlap','nfft','imageSize','layers');
+save(fullfile(PathName,FileName),'DenoiseNet');
 msgbox('The new network is now saved.','Saved','help')
 
 end
