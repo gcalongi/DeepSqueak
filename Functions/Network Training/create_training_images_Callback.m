@@ -26,7 +26,7 @@ StretchRange = [0.75, 1.25];
 h = waitbar(0,'Initializing');
 
 for k = 1:length(trainingdata)
-    TTable = table({},{},'VariableNames',{'imageFilename','USV'});
+    TTable = table({},{},'VariableNames',{'imageFilename','Call'});
     
     % Load the detection and audio files
     audioReader = squeakData();

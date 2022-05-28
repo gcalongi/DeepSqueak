@@ -22,6 +22,9 @@ end
 options.imageSize = [128, 128, 1];
 [ClusteringData, ~, ~, ~, ~] = CreateClusteringData(handles, 'scale_duration', true, 'fixed_frequency', true);
 
+%Return on cancel
+if isempty(ClusteringData); return; end
+
 % Resize the images to match the input image size
 images = zeros([options.imageSize, size(ClusteringData, 1)]);
 for i = 1:size(ClusteringData, 1)

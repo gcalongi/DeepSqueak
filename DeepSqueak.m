@@ -357,6 +357,7 @@ NextCall_Callback(hObject, eventdata, handles)
 % --- Executes on button press in RejectCall.
 function RejectCall_Callback(hObject, eventdata, handles)
 handles.data.calls.Accept(handles.data.currentcall) = false;
+handles.data.calls.Type(handles.data.currentcall) = categorical({'Noise'});
 handles.update_position_axes = 1;
 NextCall_Callback(hObject, eventdata, handles)
 
@@ -467,7 +468,7 @@ end
 new_box = table();
 new_box.Box = current_box.Position;
 new_box.Score = 1;
-new_box.Type = categorical({'USV'});
+new_box.Type = categorical({'Call'});
 new_box.CallID = categorical({'None'});
 new_box.ClustCat = categorical({'None'});
 new_box.EntThresh = handles.data.settings.EntropyThreshold;

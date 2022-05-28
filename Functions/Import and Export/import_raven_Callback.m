@@ -163,7 +163,7 @@ for i = 1:length(ravenname)
         elseif ismember('Annotation', subTable.Properties.VariableNames)
             Type = categorical(subTable.Annotation);
         else
-            Type = categorical(repmat({'USV'}, height(subTable), 1));
+            Type = categorical(repmat({'Call'}, height(subTable), 1));
         end
 
         %% Put all the variables into a table

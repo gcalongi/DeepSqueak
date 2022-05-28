@@ -26,7 +26,7 @@ for i=1:length(MUPET.SyllableNumber)
     Calls(i).Box = [MUPET.SyllableStartTime_sec_(i), MUPET.minimumFrequency_kHz_(i), MUPET.syllableDuration_msec_(i)/1000, MUPET.frequencyBandwidth_kHz_(i)];
     Calls(i).Score = 1;
     Calls(i).Accept=1;
-    Calls(i).Type=categorical({'USV'});
+    Calls(i).Type=categorical({'Call'});
 end
 Calls = struct2table(Calls);
 [~, name] = fileparts(mupetname);

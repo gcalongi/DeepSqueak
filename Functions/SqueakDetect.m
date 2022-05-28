@@ -115,11 +115,11 @@ for i = 1:length(chunks)-1
         
         % Concatinate the results
         AllBoxes=[AllBoxes
-            bboxes(Class == 'USV',:)];
+            bboxes(Class == 'Call',:)];
         AllScores=[AllScores
-            scores(Class == 'USV',:)];
+            scores(Class == 'Call',:)];
         AllClass=[AllClass
-            Class(Class == 'USV',:)];
+            Class(Class == 'Call',:)];
         
         t = toc(DetectStart);
         waitbar(...

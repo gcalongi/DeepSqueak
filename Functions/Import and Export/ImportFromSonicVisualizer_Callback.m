@@ -27,7 +27,7 @@ for i=1:n_rows
     call_duration = sv_table{i,2} - call_start;
     call_frequency_start = sv_table{i,3};
     call_frequency_length = sv_table{i,4} - call_frequency_start;
-    call_label = 'USV';
+    call_label = 'Call';
     if size(sv_table,2) == 5
        call_label = cellstr(sv_table{i,5});     
     end

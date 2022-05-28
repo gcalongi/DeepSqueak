@@ -56,6 +56,7 @@ for file = fname
             Calls(i).Accept=1;
         else
             Calls(i).Accept=0;
+            Calls(i).Type = categorical({'Noise'});
         end
         Calls(i).Type=data.event(i).annotation.name;
         
