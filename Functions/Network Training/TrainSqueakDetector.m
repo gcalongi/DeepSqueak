@@ -44,23 +44,23 @@ switch bCustomize
         end
         
         %% Solver for network
-        % sdgm = Stochasitic Gradient Descent with Momentum optimizer
+        % sgdm = Stochasitic Gradient Descent with Momentum optimizer
             % Evaluates the negative gradient of the loss at each iteration
             % and updates parameters with subset of training data
             % Different subsets ("Mini-Batch") used at each iteration
             % Full pass of trianing algorithm over entire training set with
             % Mini-Batches = one Epoch
-            % Momentum Optimizer = SDG can oscillate along path of descent
+            % Momentum Optimizer = SGD can oscillate along path of descent
             % toward optimum; adding momentum reduces this oscilalation
         % rmsprop = RMSProp optimizer
-            % SDGM uses single learning rate for all parameters; RMSProp
+            % SGDM uses single learning rate for all parameters; RMSProp
             % seeks to improve training by different learning rates by
             % parameter
             % Decreases learning rates of parameters with large gradients;
             % increases learning rates of paramters with small gradients
         % adam = Adam optimizer
             % Similar to RMSProp but with momentum
-        opts = {'sdgm','rmsprop','adam'};
+        opts = {'sgdm','rmsprop','adam'};
         [indx,tf] = listdlg('PromptString',{'Select the solver for the training network:',''},...
             'SelectionMode','single','ListString',opts);
         if ~tf
@@ -71,7 +71,7 @@ switch bCustomize
             % where I could ask the user to set Momentum,
             % GradientDecayFactor, and SquaredGradientDecayFactor
 %             switch chSolver
-%                 case 'sdgm'
+%                 case 'sgdm'
 %                 case 'rmsprop'
 %                 case 'adam'
         end
