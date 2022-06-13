@@ -35,8 +35,8 @@ switch bCustomize
         xlabel("Number of Anchors")
         title("Number of Anchors vs. Mean IoU")
 
-        nAnchors = inputdlg('How many anchor boxes would you like to use (minimize # while maximizing Mean IoU)?:',...
-                     'Anchor Boxes', [1 50]);
+        nAnchors = str2double(inputdlg('How many anchor boxes would you like to use (minimize # while maximizing Mean IoU)?:',...
+                     'Anchor Boxes', [1 50]));
         if isempty(nAnchors)
             return
         else
