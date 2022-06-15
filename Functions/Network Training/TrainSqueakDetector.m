@@ -1,7 +1,11 @@
 function [detector, lgraph, options, info] = TrainSqueakDetector(TrainingTables, layers)
 
 % Extract boxes delineations and store as boxLabelDatastore
-blds = boxLabelDatastore(TrainingTables(:,2:end));
+% Convert training and validation data to
+% datastores for dumb YOLO fn
+imdsTrain = imageDatastore(TrainingTables{:,1});
+bldsTrain = boxLabelDatastore(TrainingTables(:,2:end));
+dsTrain = combine(imdsTrain,bldsTrain);
 
 %% Set training options
 bCustomize = questdlg('Would you like to customize your network options or use defaults?','Customize?','Customize','Defaults','Defaults');
@@ -9,7 +13,7 @@ switch bCustomize
     %Default
     case 'Defaults'
         % Set anchor boxes (default = 8)
-        anchorBoxes = estimateAnchorBoxes(blds,8);
+        anchorBoxes = estimateAnchorBoxes(bldsTrain,8);
         % Set training options
         options = trainingOptions('sgdm',...
                   'InitialLearnRate',0.001,...
@@ -26,7 +30,7 @@ switch bCustomize
         arranchorBoxes = cell(maxNumAnchors, 1);
         for k = 1:maxNumAnchors
             % Estimate anchors and mean IoU.
-            [arranchorBoxes{k},meanIoU(k)] = estimateAnchorBoxes(blds,k);    
+            [arranchorBoxes{k},meanIoU(k)] = estimateAnchorBoxes(bldsTrain,k);    
         end
 
         figure
@@ -40,7 +44,7 @@ switch bCustomize
         if isempty(nAnchors)
             return
         else
-            anchorBoxes = estimateAnchorBoxes(blds,nAnchors);
+            anchorBoxes = estimateAnchorBoxes(bldsTrain,nAnchors);
         end
         
         %% Solver for network
@@ -99,7 +103,8 @@ switch bCustomize
                  
         %% Validation Data
             % Used to determine if network is overfitting
-        bValData = questdlg('Would you like to use ~10% of your training data to validate (recommended to assess overfitting)?',...
+        bValData = questdlg({'Would you like to use ~10% of your training data to validate (recommended to assess overfitting)?';...
+            "WARNING: Due to data type restrictions and unclear Matlab documentation, using validation data may prevent data shuffling between epochs, possibly (ironically) leading to overfitting."},...
             'Validation Data?','Yes','No','No');
         switch bValData
             % Select validation data - gets complicated with multiple
@@ -143,9 +148,20 @@ switch bCustomize
                     case 'Yes'
                         valTT = TrainingTables(indSel,:);
                         TrainingTables = TrainingTables(~indSel,:);
+                        
+                        % Convert training and validation data to
+                        % datastores for dumb YOLO fn
+                        imdsTrain = imageDatastore(TrainingTables{:,1});
+                        bldsTrain = boxLabelDatastore(TrainingTables(:,2:end));
+                        dsTrain = combine(imdsTrain,bldsTrain);
+                        
+                        imdsVal = imageDatastore(valTT{:,1});
+                        bldsVal = boxLabelDatastore(valTT(:,2:end));
+                        dsVal = combine(imdsVal,bldsVal);                        
                 end                
             case 'No'
-                valTT = [];
+                dsVal = [];
+                dsTrain = TrainingTables;
         end
         
         % Set training options
@@ -153,7 +169,7 @@ switch bCustomize
                   'InitialLearnRate',nInitLearnRate,...
                   'MiniBatchSize',nMiniBatchSz,...
                   'MaxEpochs',nNumEpochs,...
-                  'ValidationData',valTT,...
+                  'ValidationData',dsVal,...
                   'Shuffle','every-epoch',...
                   'Verbose',true,...
                   'VerboseFrequency',30,...
@@ -191,9 +207,9 @@ lgraph = connectLayers(lgraph,featureExtractionLayer,"yolov2Conv1");
 
 % Train the YOLO v2 network.
 if nargin == 1
-    [detector,info] = trainYOLOv2ObjectDetector(TrainingTables,lgraph,options);
+    [detector,info] = trainYOLOv2ObjectDetector(dsTrain,lgraph,options);
 elseif nargin == 2
-    [detector,info] = trainYOLOv2ObjectDetector(TrainingTables,layers,options);
+    [detector,info] = trainYOLOv2ObjectDetector(dsTrain,layers,options);
 else
      error('This should not happen')   
 end
