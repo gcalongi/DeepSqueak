@@ -14,9 +14,7 @@ elseif nargout < 3 % If ClusteringData is requested, we don't need Calls
 end
 
 if ~any(strcmp('CallID', Calls.Properties.VariableNames)) || length(unique(Calls.CallID)) ~= height(Calls)
-    if length(unique(Calls.CallID)) ~= height(Calls)
-        warning('CallID not unique - replacing with 1:height(Calls)')
-    end
+    warning('CallID non-existent or not unique - replacing with 1:height(Calls)')
     Calls.CallID = categorical(1:height(Calls))';
 end
 if ~any(strcmp('ClustCat', Calls.Properties.VariableNames))
