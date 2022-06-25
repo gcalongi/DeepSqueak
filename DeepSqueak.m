@@ -351,6 +351,7 @@ end
 % --- Executes on button press in AcceptCall.
 function AcceptCall_Callback(hObject, eventdata, handles)
 handles.data.calls.Accept(handles.data.currentcall) = true;
+handles.data.calls.Type(handles.data.currentcall) = categorical({'Call'});
 handles.update_position_axes = 1;
 NextCall_Callback(hObject, eventdata, handles)
 
