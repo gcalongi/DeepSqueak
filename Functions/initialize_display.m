@@ -96,24 +96,6 @@ handles.currentWindowRectangle = rectangle(handles.spectogramWindow,...
     'LineStyle','--',...
     'PickableParts', 'none');
 
-
-% Apply global defaults for Entropy and Amplitude thresholds if they have never been
-% applied before.  This check needs to be before update_fig()
-bApplyGlobal = false;
-if height(handles.data.calls) > 0
-    if ~any(strcmp('EntThresh',handles.data.calls.Properties.VariableNames))
-        handles.data.calls.EntThresh(:) = 0;
-    end
-
-    if ~any(strcmp('AmpThresh',handles.data.calls.Properties.VariableNames))
-        handles.data.calls.AmpThresh(:) = 0;
-    end
-    
-    if all(handles.data.calls.EntThresh(:) == 0) && all(handles.data.calls.AmpThresh(:) == 0)
-        bApplyGlobal = true;
-    end
-end
-
 update_fig(hObject, eventdata, handles);
 handles = guidata(hObject);
 
@@ -132,28 +114,3 @@ if handles.data.clim(2) == 0
     end
 end
 change_spectogram_contrast_Callback(hObject,[],handles);
-
-%Continue applying global thresholds if applicable
-if bApplyGlobal
-%     h = waitbar(0,'Applying global tonality and amplitude thresholds...');
-    % Apply global settings to all calls
-    handles.data.calls.EntThresh(:) = handles.data.settings.EntropyThreshold;
-    handles.data.calls.AmpThresh(:) = handles.data.settings.AmplitudeThreshold;
-%     % Start at and update last call
-%     handles.data.currentcall=height(handles.data.calls);
-%     % Cycle through all calls applying global thresholds
-%     for cc = height(handles.data.calls):-1:2
-%         % If not the first call
-%         handles.data.currentcall=cc;
-%         % Recalculate Stats using global entropy and amp thresholds
-%         [I,windowsize,noverlap,nfft,rate,box,~,~,~] = CreateFocusSpectrogram(handles.data.calls(handles.data.currentcall,:),handles,false, [], handles.data);
-%         stats = CalculateStats(I,windowsize,noverlap,nfft,rate,box,handles.data.calls.EntThresh(handles.data.currentcall),handles.data.calls.AmpThresh(handles.data.currentcall));
-%         % Store new power value
-%         handles.data.calls.Power(handles.data.currentcall) = stats.MeanPower;
-%     end
-%     % Reset
-%     handles.data.currentcall = 1;
-%     close(h);
-    disp('Saving file with globally-applied Entropy and Amplitude Thresholds for each call...')
-    savesession_Callback(hObject, eventdata, handles, true);
-end

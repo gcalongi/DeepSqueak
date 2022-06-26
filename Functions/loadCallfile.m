@@ -1,4 +1,4 @@
-function [Calls,audiodata,ClusteringData] = loadCallfile(filename,handles)
+function [Calls,audiodata,ClusteringData,data] = loadCallfile(filename,handles)
 
 data = load(filename);
 
@@ -9,18 +9,25 @@ ClusteringData = table();
 %% Unpack the data
 if isfield(data, 'Calls')
     Calls = data.Calls;
+
+    %% Supply defaults for any misc missing variables
+    if ~any(strcmp('CallID', Calls.Properties.VariableNames)) || length(unique(Calls.CallID)) ~= height(Calls)
+        warning('CallID non-existent or not unique - replacing with 1:height(Calls)')
+        Calls.CallID = categorical(1:height(Calls))';
+    end
+    if ~any(strcmp('ClustCat', Calls.Properties.VariableNames))
+        clustcat = cell(1,height(Calls));
+        clustcat(:) = {'None'};
+        Calls.ClustCat = categorical(clustcat)';
+    end
+    if ~any(strcmp('EntThresh', Calls.Properties.VariableNames))
+        Calls.EntThresh(:) = handles.data.settings.EntropyThreshold;
+    end
+    if ~any(strcmp('AmpThresh', Calls.Properties.VariableNames))
+        Calls.AmpThresh(:) = handles.data.settings.AmplitudeThreshold;
+    end
 elseif nargout < 3 % If ClusteringData is requested, we don't need Calls
     error('This doesn''t appear to be a detection file!')
-end
-
-if ~any(strcmp('CallID', Calls.Properties.VariableNames)) || length(unique(Calls.CallID)) ~= height(Calls)
-    warning('CallID non-existent or not unique - replacing with 1:height(Calls)')
-    Calls.CallID = categorical(1:height(Calls))';
-end
-if ~any(strcmp('ClustCat', Calls.Properties.VariableNames))
-    clustcat = cell(1,height(Calls));
-    clustcat(:) = {'None'};
-    Calls.ClustCat = categorical(clustcat)';
 end
 
 if isfield(data, 'audiodata')
@@ -31,6 +38,8 @@ if isfield(data, 'ClusteringData')
     ClusteringData = data.ClusteringData;
 end
 
+%% Output for data modification check
+data = data.Calls;
 
 if nargout < 3
     
@@ -47,7 +56,7 @@ if nargout < 3
         Calls(Calls.Box(:,3) == 0, :) = [];
         
         % Remove any old variables that we don't use anymore
-        Calls = removevars(Calls, intersect(Calls.Properties.VariableNames, {'RelBox', 'Rate', 'Audio'}));
+        Calls = removevars(Calls, intersect(Calls.Properties.VariableNames, {'RelBox', 'Rate', 'Audio','Power'}));
         
         % Sort calls by time
         Calls = sortrows(Calls, 'Box');
