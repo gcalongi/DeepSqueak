@@ -6,6 +6,10 @@ Calls = table();
 audiodata = struct();
 ClusteringData = table();
 
+if isfield(data, 'audiodata')
+    audiodata = data.audiodata;
+end
+
 %% Unpack the data
 if isfield(data, 'Calls')
     Calls = data.Calls;
@@ -26,20 +30,16 @@ if isfield(data, 'Calls')
     if ~any(strcmp('AmpThresh', Calls.Properties.VariableNames))
         Calls.AmpThresh(:) = handles.data.settings.AmplitudeThreshold;
     end
+
+    %% Output for detection mat modification check
+    data = data.Calls;
 elseif nargout < 3 % If ClusteringData is requested, we don't need Calls
     error('This doesn''t appear to be a detection file!')
-end
-
-if isfield(data, 'audiodata')
-    audiodata = data.audiodata;
 end
 
 if isfield(data, 'ClusteringData')
     ClusteringData = data.ClusteringData;
 end
-
-%% Output for data modification check
-data = data.Calls;
 
 if nargout < 3
     

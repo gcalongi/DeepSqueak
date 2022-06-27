@@ -29,7 +29,7 @@ for i = 1:length(files)
     % Find the index of the clustering data that belongs to the file
     cluster_idx = find(file_idx == i);
 
-    if ismember('UserID',obj.ClusteringData.Properties.VariableNames)
+    if ismember('UserID',ClusteringData.Properties.VariableNames)
         % Find the index of the calls in the file that correspond the the clustering data
         [~,call_idx] = ismember(ClusteringData{cluster_idx, 'UserID'},Calls.CallID);
     else

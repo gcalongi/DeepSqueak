@@ -250,13 +250,14 @@ classdef clusteringGUI < handle
                 %all call images have the same frequency span
 %             freqRange = [ClusteringData.MinFreq(clustIndex(callID)),...
 %                 ClusteringData.MinFreq(clustIndex(callID)) + ClusteringData.Bandwidth(clustIndex(callID))];
-            freqRange = [obj.minfreq, obj.maxfreq];
-            % Account for any padding on the y axis
-            freqRange = freqRange + range(freqRange) .* rel_y(1) .* [-1, 1];
+%             freqRange = [obj.minfreq, obj.maxfreq];
+%             % Account for any padding on the y axis
+%             freqRange = freqRange + range(freqRange) .* rel_y(1) .* [-1, 1];
 
-            freqdata = linspace(freqRange(2) ,freqRange(1), obj.thumbnail_size(1));
-            colorMask = interp1(linspace(obj.minfreq, obj.maxfreq, size(obj.ColorData,1)), obj.ColorData, freqdata, 'nearest', 'extrap');
-            colorIM = im .* colorMask ./ 255;
+%             freqdata = linspace(freqRange(2) ,freqRange(1), obj.thumbnail_size(1));
+%             colorMask = interp1(linspace(obj.minfreq, obj.maxfreq, size(obj.ColorData,1)), obj.ColorData, freqdata, 'nearest', 'extrap');
+%             colorIM = im .* colorMask ./ 255;
+            colorIM = ind2rgb(im,inferno(256));
             
             if ismember('NumContPts',ClusteringData.Properties.VariableNames) && ~all(ClusteringData.NumContPts==0)
                 %Overlay the contour used for the k-means clustering
@@ -267,6 +268,10 @@ classdef clusteringGUI < handle
                 contourtime = cell2mat(obj.ClusteringData.xTime_Contour(clustIndex(callID)));
                 contourfreq = cell2mat(obj.ClusteringData.xFreq_Contour(clustIndex(callID)));
                 ploty = resz(1)*contourfreq/ClusteringData.FreqScale(clustIndex(callID))+pad(1);
+                %Save for later - compatible with update that saves only
+                %spectrograms within boxes to ClusteringData
+                %ploty = resz(1)*(contourfreq-ClusteringData.MinFreq(clustIndex(callID)))/ClusteringData.FreqScale(clustIndex(callID))+pad(1);
+                
                 ploty = size(colorIM,1)-ploty;
                 plotx = resz(2)*contourtime/ClusteringData.TimeScale(clustIndex(callID))+pad(2);
                 
@@ -309,6 +314,9 @@ classdef clusteringGUI < handle
             y_span = y_lim(2) - y_lim(1);
             ytick_positions = linspace(y_span*rel_y(1)+y_lim(1), y_span*rel_y(2)+y_lim(1),4);            
             
+            
+            %Save for later - compatible with update that saves only boxed
+            %call
             %y_ticks = linspace(obj.ClusteringData.MinFreq(i),obj.ClusteringData.MinFreq(i)+obj.ClusteringData.Bandwidth(i),3);
             y_ticks = linspace(obj.minfreq,obj.maxfreq,4);
             y_ticks = arrayfun(@(x) sprintf('%.1f',x),y_ticks(1:end),'UniformOutput',false);
