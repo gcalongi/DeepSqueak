@@ -1,13 +1,14 @@
 function UnsupervisedClustering_Callback(hObject, eventdata, handles)
 % Cluster with k-means or adaptive
 
-SuperBatch = questdlg('Do you want to do a super batch run using a special mat?','Super Batch','Yes','No','No');
+SuperBatch = questdlg({'Do you want to do a super batch run using a special mat?'; ...
+    'If you do not know what this is, say No.'},'Super Batch','Yes','No','No');
 bSuperBatch = false;
 nruns = 1;
 switch SuperBatch                         
     case 'Yes'
         % Load batch file
-        [batchfn, exportpath] = uigetfile('*.mat');
+        [batchfn, exportpath] = uigetfile('*.mat','Select .mat file containing a "batchtable" variable');
         load(fullfile(exportpath,batchfn),'batchtable');
         bSuperBatch = true;
         nruns = height(batchtable);
@@ -33,7 +34,7 @@ for j = 1:nruns
     finished = 0; % Repeated until
     while ~finished
         if ~bSuperBatch
-            choice = questdlg('Choose clustering method:','Cluster','ARTwarp','K-means (recommended)', 'Variational Autoencoder','K-means (recommended)');
+            choice = questdlg('Choose clustering method:','Clustering Method','ARTwarp','K-means (recommended)', 'Variational Autoencoder','K-means (recommended)');
         end
         switch choice
             case []
@@ -41,7 +42,7 @@ for j = 1:nruns
 
             case {'K-means (recommended)', 'Variational Autoencoder'}
                 if ~bSuperBatch
-                    FromExisting = questdlg('From existing model?','Cluster','Yes','No','No');
+                    FromExisting = questdlg('Use previously saved model? E.g. KMeans Model.mat','Load saved model mat?','Yes','No','No');
                 end
                 switch FromExisting % Load Model
                     case 'No'
@@ -100,7 +101,8 @@ for j = 1:nruns
                         end
 
                     case 'Yes'
-                        [FileName,PathName] = uigetfile(fullfile(handles.data.squeakfolder,'Clustering Models','*.mat'));
+                        [FileName,PathName] = uigetfile(fullfile(handles.data.squeakfolder,'Clustering Models','*.mat'), ...
+                            'Select a previously created model .mat file (e.g. KMeans Model.mat)');
                         if isnumeric(FileName); return;end
                         switch choice
                             case 'K-means (recommended)'
@@ -351,7 +353,7 @@ for j = 1:nruns
             case 'ARTwarp'
                 ClusteringData = CreateClusteringData(handles, 'forClustering', true, 'save_data', true);
                 if isempty(ClusteringData); return; end
-                FromExisting = questdlg('From existing model?','Cluster','Yes','No','No');
+                FromExisting = questdlg('Use previously saved model? E.g. KMeans Model.mat','Load saved model mat?','Yes','No','No');
                 switch FromExisting% Load Art Model
                     case 'No'
                         %% Get settings
@@ -371,7 +373,8 @@ for j = 1:nruns
                         end
 
                     case 'Yes'
-                        [FileName,PathName] = uigetfile(fullfile(handles.data.squeakfolder,'Clustering Models','*.mat'));
+                        [FileName,PathName] = uigetfile(fullfile(handles.data.squeakfolder,'Clustering Models','*.mat'), ...
+                            'Select a previously created model .mat file (e.g. ARTwarp Model.mat)');
                         load(fullfile(PathName,FileName),'ARTnet','settings');
                         if exist('ARTnet', 'var') ~= 1
                             warndlg('ARTnet model could not be found. Is this file a trained ARTwarp2 model?')
@@ -473,7 +476,7 @@ for j = 1:nruns
                     pind = pind(end);
                     pname = char(ClusteringData{1,'Filename'});
                     pname = pname(1:pind);
-                    [FileName, PathName] = uiputfile(fullfile(pname, 'K-Means Model.mat'), 'Save clustering model');
+                    [FileName, PathName] = uiputfile(fullfile(pname, 'KMeans Model.mat'), 'Save clustering model (centroids and parameters)');
                     if ~isnumeric(FileName)
                         save(fullfile(PathName, FileName), 'C', 'num_pts','RES','freq_weight',...
                             'relfreq_weight', 'slope_weight', 'concav_weight', 'duration_weight', 'pc_weight',... % 'pc2_weight',
@@ -506,7 +509,7 @@ end
 
 % Save the clusters
 if ~bSuperBatch
-    bUpdate =  questdlg('Update files with new clusters?','Save clusters','Yes','No','No');
+    bUpdate =  questdlg('Update detections .mat files (variable ClustCat) with new clusters?','Save clusters','Yes','No','No');
 end
 switch bUpdate
     case 'Yes'
@@ -694,7 +697,7 @@ if tf == 1
         %case 'User Defined'
         case 3
             if nargin == 1
-                opt_options = inputdlg({'# of Clusters','Replicates'},'Cluster with k-means',[1; 1],{'15','10'});
+                opt_options = inputdlg({'# of Clusters','Replicates'},'Choose Model Options',[1; 1],{'15','10'});
                 %k = inputdlg({'Choose number of k-means:'},'Cluster with k-means',1,{'15'});
                 if isempty(opt_options); return; end
                 k = str2double(opt_options{1});
@@ -731,7 +734,7 @@ if tf == 1
             greater0 = zeros(1,(maxclust-minclust+1));
             
             fig = uifigure;
-            d = uiprogressdlg(fig,'Title','Please Wait',...
+            d = uiprogressdlg(fig,'Silhouette Loop','Please Wait',...
                 'Message','Running silhouettes...');
             drawnow
             
